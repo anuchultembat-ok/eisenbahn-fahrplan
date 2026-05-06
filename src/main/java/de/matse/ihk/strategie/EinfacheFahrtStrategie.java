@@ -1,4 +1,6 @@
-package de.matse.ihk;
+package de.matse.ihk.strategie;
+
+import de.matse.ihk.model.BahnhofPlan;
 
 public class EinfacheFahrtStrategie extends FahrplanStrategie{
     @Override

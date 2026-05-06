@@ -1,4 +1,7 @@
-package de.matse.ihk;
+package de.matse.ihk.strategie;
+
+import de.matse.ihk.model.BahnhofNode;
+import de.matse.ihk.model.BahnhofPlan;
 
 public abstract class FahrplanStrategie {
     public abstract String getStrategieName(); 

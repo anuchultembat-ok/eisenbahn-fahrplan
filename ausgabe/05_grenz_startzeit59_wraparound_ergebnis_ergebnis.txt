@@ -1,0 +1,39 @@
+Einfache Fahrt:
+An     04  12
+Wa           
+Ab 59  05  13
+    A   B   C
+Ab 27  21  13
+Wa           
+An 26  20    
+Gesamtdauer Hinfahrt, Rückfahrt       : 13, 13
+Summe Wartezeiten Hinfahrt, Rückfahrt : 0, 0
+Summe Strafen                         : 0
+
+
+Einseitiges Warten:
+An     04  12
+Wa           
+Ab 59  05  13
+    A   B   C
+Ab 27  21  13
+Wa           
+An 26  20    
+Gesamtdauer Hinfahrt, Rückfahrt       : 13, 13
+Summe Wartezeiten Hinfahrt, Rückfahrt : 0, 0
+Summe Strafen                         : 0
+
+
+Beidseitiges Warten:
+An     04  12
+Wa           
+Ab 59  05  13
+    A   B   C
+Ab 27  21  13
+Wa           
+An 26  20    
+Gesamtdauer Hinfahrt, Rückfahrt       : 13, 13
+Summe Wartezeiten Hinfahrt, Rückfahrt : 0, 0
+Summe Strafen                         : 0
+
+

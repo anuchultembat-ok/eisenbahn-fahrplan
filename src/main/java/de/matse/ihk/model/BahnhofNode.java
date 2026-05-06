@@ -1,7 +1,7 @@
-package de.matse.ihk;
+package de.matse.ihk.model;
 
 public class BahnhofNode {
-    private char name;
+    private String name;
     private Integer ankunfthin; 
     private Integer abfahrthin;
     private Integer wartezeitHin = 0;
@@ -83,11 +83,11 @@ private boolean isTimeInInterval(int t, int start, int ende) {
         this.prev = prev;
     }
 
-    public BahnhofNode(char name) {
+    public BahnhofNode(String name) {
         this.name = name;
     }
 
-    public char getName() {
+    public String getName() {
         return name;
     }
     public Integer getAnkunfthin() {

@@ -5,8 +5,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import de.matse.ihk.BahnhofPlan;
-import de.matse.ihk.SimulationsDaten;
+import de.matse.ihk.model.BahnhofPlan;
+import de.matse.ihk.model.SimulationsDaten;
 
 public class EingabeLeser {
     public static SimulationsDaten leseDatei(String dateiPfad) throws IOException {
@@ -24,8 +24,8 @@ public class EingabeLeser {
 
             if (aktuelleZeile.equals("Strecke:")) {
                 // Die nächste Zeile enthält die Bahnhöfe, getrennt durch Whitespace
-                char[] bahnhoefe = zeilen.get(i + 1).replaceAll("\\s+", "").toCharArray();
-                for (char name : bahnhoefe) {
+                String[] bahnhoefe = zeilen.get(i + 1).split("\\s+");
+                for (String name : bahnhoefe) {
                     bahnhofPlan.addBahnhof(name);
                 }
             } 

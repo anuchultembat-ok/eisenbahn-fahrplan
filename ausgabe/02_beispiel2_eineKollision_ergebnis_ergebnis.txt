@@ -1,0 +1,39 @@
+Einfache Fahrt:
+An     22  32  39  47  51  54
+Wa                           
+Ab 17  23  33  40  48  52  55
+    A   Bx  C   D   E   F   G
+Ab 33  27  17  10  02  58  55
+Wa                           
+An 32  26  16  09  01  57    
+Gesamtdauer Hinfahrt, Rückfahrt       : 37, 37
+Summe Wartezeiten Hinfahrt, Rückfahrt : 0, 0
+Summe Strafen                         : 0
+
+
+Einseitiges Warten:
+An     22  32  39  47  51  54
+Wa                           
+Ab 17  23  33  40  48  52  55
+    A   B   C   D   E   F   G
+Ab 33  43  33  10  02  58  55
+Wa         16                
+An 48  42  16  09  01  57    
+Gesamtdauer Hinfahrt, Rückfahrt       : 37, 53
+Summe Wartezeiten Hinfahrt, Rückfahrt : 0, 16
+Summe Strafen                         : 256
+
+
+Beidseitiges Warten:
+An     22  32  39  47  51  54
+Wa                           
+Ab 17  23  33  40  48  52  55
+    A   B   C   D   E   F   G
+Ab 49  43  33  26  18  14  11
+Wa                           
+An 48  42  32  25  17  13    
+Gesamtdauer Hinfahrt, Rückfahrt       : 37, 37
+Summe Wartezeiten Hinfahrt, Rückfahrt : 0, 0
+Summe Strafen                         : 0
+
+

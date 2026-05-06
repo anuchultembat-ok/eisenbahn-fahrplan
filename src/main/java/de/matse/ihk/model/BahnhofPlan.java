@@ -1,4 +1,4 @@
-package de.matse.ihk;
+package de.matse.ihk.model;
 
 import java.util.List;
 
@@ -7,7 +7,7 @@ public class BahnhofPlan{
     private BahnhofNode tail; 
     private int groesse = 0; 
 
-    public void addBahnhof(char name) {
+    public void addBahnhof(String name) {
         BahnhofNode newNode = new BahnhofNode(name);
         if(head == null){
             head = newNode; 

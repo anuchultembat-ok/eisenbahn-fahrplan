@@ -1,6 +1,6 @@
 Strecke:
-A B C D E F G
+A B C D E F
 Abstaende:
-5 8 6 7 3 2
+1 1 1 1 1
 Start Hinfahrt:
-17
+0

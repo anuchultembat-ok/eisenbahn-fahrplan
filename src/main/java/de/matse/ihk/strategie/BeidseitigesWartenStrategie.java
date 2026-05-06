@@ -1,4 +1,7 @@
-package de.matse.ihk;
+package de.matse.ihk.strategie;
+
+import de.matse.ihk.model.BahnhofNode;
+import de.matse.ihk.model.BahnhofPlan;
 
 public class BeidseitigesWartenStrategie extends FahrplanStrategie {
     private int besteStrafe = Integer.MAX_VALUE;
