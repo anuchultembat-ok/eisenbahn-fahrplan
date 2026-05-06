@@ -1,0 +1,679 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[ngerman]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\usepackage{float}
+
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
+
+\geometry{margin=2.5cm}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!60!black,
+    urlcolor=blue!60!black,
+}
+
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{codeframe}{RGB}{200,200,200}
+\definecolor{javakw}{RGB}{0,0,200}
+\definecolor{javastr}{RGB}{0,128,0}
+\definecolor{javacomment}{RGB}{128,128,128}
+
+\lstset{
+    language=Java,
+    backgroundcolor=\color{codebg},
+    frame=single,
+    rulecolor=\color{codeframe},
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{javakw}\bfseries,
+    stringstyle=\color{javastr},
+    commentstyle=\color{javacomment}\itshape,
+    breaklines=true,
+    showstringspaces=false,
+    tabsize=4,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=8pt,
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Eisenbahn-Fahrplan Simulation}
+\lhead{IHK Abschlussprojekt}
+\rfoot{Seite \thepage}
+
+\tcbuselibrary{skins, breakable}
+
+\newtcolorbox{beispielbox}[1][]{
+    colback=blue!5,
+    colframe=blue!40!black,
+    fonttitle=\bfseries,
+    title=Beispiel,
+    #1
+}
+
+\newtcolorbox{hinweisbox}[1][]{
+    colback=orange!5,
+    colframe=orange!60!black,
+    fonttitle=\bfseries,
+    title=Hinweis,
+    #1
+}
+
+% ─────────────────────────────────────────
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    {\Huge\bfseries Eisenbahn-Fahrplan Simulation\par}
+    \vspace{0.5cm}
+    {\Large Technische Dokumentation\par}
+    \vspace{2cm}
+    \rule{\linewidth}{0.4pt}\\[0.5cm]
+    {\large IHK Abschlussprojekt -- MATSE\par}
+    \rule{\linewidth}{0.4pt}
+    \vspace{2cm}
+    {\large\itshape Kollisionserkennung, Wartezeitermittlung\\und Umsetzung der drei Fahrplanstrategien\par}
+    \vfill
+    {\large 2026\par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ─────────────────────────────────────────
+\section{Aufgabenbeschreibung}
+
+Das Programm simuliert den Fahrplan einer eingleisigen Eisenbahnstrecke zwischen mehreren Bahnhöfen. Auf dieser Strecke fährt ein Zug von Bahnhof \textbf{A} nach Bahnhof \textbf{Z} (Hinfahrt) und anschließend zurück (Rückfahrt). Da die Strecke nur \textbf{eingleisig} ist, darf jeweils nur ein Zug gleichzeitig auf einem Streckenabschnitt zwischen zwei aufeinanderfolgenden Bahnhöfen fahren. Andernfalls entsteht eine \textbf{Kollision}.
+
+Ziel ist es, Fahrpläne nach drei verschiedenen Strategien zu berechnen:
+\begin{enumerate}
+    \item \textbf{Einfache Fahrt}: Hin- und Rückfahrt werden ohne Rücksicht auf Kollisionen berechnet.
+    \item \textbf{Einseitiges Warten}: Nur der Rückzug wartet an Kollisionspunkten.
+    \item \textbf{Beidseitiges Warten}: Die Wartezeit wird auf beide Züge verteilt, um die Strafe zu minimieren.
+\end{enumerate}
+
+Die \textbf{Strafe} für eine Strategie wird als Summe der quadrierten Wartezeiten berechnet, um lange Wartezeiten stärker zu bestrafen als viele kurze.
+
+Die Eingabe erfolgt über Textdateien, die Strecke, Abstände zwischen den Bahnhöfen sowie die Startzeit der Hinfahrt enthalten. Die Ausgabe wird sowohl auf der Konsole angezeigt als auch in Dateien gespeichert.
+
+% ─────────────────────────────────────────
+\section{Modellierung der Datenstrukturen}
+
+\subsection{Überblick}
+
+Das Programm besteht aus folgenden Hauptklassen:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Klasse / Record} & \textbf{Paket} & \textbf{Aufgabe} \\
+\midrule
+\texttt{BahnhofNode} & \texttt{model} & Einzelner Bahnhof mit Zeitdaten \\
+\texttt{BahnhofPlan} & \texttt{model} & Verkettete Liste aller Bahnhöfe \\
+\texttt{SimulationsDaten} & \texttt{model} & Eingabedaten (Plan + Startzeit) \\
+\texttt{FahrplanStrategie} & \texttt{strategie} & Abstrakte Basisklasse (Strategy Pattern) \\
+\texttt{EinfacheFahrtStrategie} & \texttt{strategie} & Konkrete Strategie 1 \\
+\texttt{EinseitigesWartenStrategie} & \texttt{strategie} & Konkrete Strategie 2 \\
+\texttt{BeidseitigesWartenStrategie} & \texttt{strategie} & Konkrete Strategie 3 \\
+\texttt{EingabeLeser} & \texttt{io} & Einlesen der Textdatei \\
+\texttt{AusgabeManager} & \texttt{io} & Formatierte Ausgabe \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{BahnhofNode -- Der Knoten der verketteten Liste}
+
+Jeder Bahnhof wird durch ein Objekt der Klasse \texttt{BahnhofNode} repräsentiert. Der Knoten speichert sowohl seine eigenen Zeitdaten als auch Zeiger auf den Vorgänger- und Nachfolgeknoten:
+
+\begin{lstlisting}[caption={Felder von BahnhofNode}]
+private String name;
+private Integer ankunfthin;    // Ankunftszeit Hinfahrt
+private Integer abfahrthin;    // Abfahrtszeit Hinfahrt
+private Integer wartezeitHin = 0;
+private Integer ankunftrueck;  // Ankunftszeit Rueckfahrt
+private Integer abfahrtrueck;  // Abfahrtszeit Rueckfahrt
+private Integer wartezeitRueck = 0;
+private BahnhofNode next;      // Zeiger auf naechsten Bahnhof
+private BahnhofNode prev;      // Zeiger auf vorherigen Bahnhof
+private int distanceToNext;    // Fahrtzeit zum naechsten Bahnhof (Minuten)
+\end{lstlisting}
+
+\subsection{BahnhofPlan -- Die doppelt verkettete Liste}
+
+Die Klasse \texttt{BahnhofPlan} verwaltet alle Bahnhöfe als \textbf{doppelt verkettete Liste}. Sie hält direkte Zeiger auf den ersten Knoten (\texttt{head}) und den letzten Knoten (\texttt{tail}):
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=0mm,
+    box/.style={draw, minimum width=2.2cm, minimum height=0.7cm, font=\small\ttfamily},
+    ptr/.style={-Stealth, thick},
+    dblptr/.style={Stealth-Stealth, thick, blue!60!black}
+]
+
+% Nodes
+\node[box, fill=blue!10] (A) {A};
+\node[box, fill=blue!10, right=1.5cm of A] (B) {B};
+\node[box, fill=blue!10, right=1.5cm of B] (C) {C};
+\node[box, fill=blue!10, right=1.5cm of C] (D) {\ldots};
+
+% head/tail labels
+\node[above=0.4cm of A, font=\small\bfseries] (headlbl) {head};
+\draw[ptr] (headlbl) -- (A);
+\node[above=0.4cm of C, font=\small\bfseries] (taillbl) {tail};
+\draw[ptr] (taillbl) -- (C);
+
+% next arrows (forward)
+\draw[ptr, red!70!black] (A.east) -- node[above, font=\tiny] {next} (B.west);
+\draw[ptr, red!70!black] (B.east) -- node[above, font=\tiny] {next} (C.west);
+\draw[ptr, red!70!black] (C.east) -- node[above, font=\tiny] {next} (D.west);
+
+% prev arrows (backward)
+\draw[ptr, green!50!black, bend right=30] (B.south) to node[below, font=\tiny] {prev} (A.south);
+\draw[ptr, green!50!black, bend right=30] (C.south) to node[below, font=\tiny] {prev} (B.south);
+\draw[ptr, green!50!black, bend right=30] (D.south) to node[below, font=\tiny] {prev} (C.south);
+
+% distance labels
+\node[below=0.9cm of A, xshift=0.75cm, font=\tiny, red!70!black] {dist=5};
+\node[below=0.9cm of B, xshift=0.75cm, font=\tiny, red!70!black] {dist=8};
+\node[below=0.9cm of C, xshift=0.75cm, font=\tiny, red!70!black] {dist=?};
+
+\end{tikzpicture}
+\caption{Doppelt verkettete Liste der Bahnhöfe (Beispiel: A--B--C--\ldots)}
+\end{figure}
+
+\subsubsection{Warum eine doppelt verkettete Liste?}
+
+Die doppelt verkettete Liste ist für dieses Problem besonders geeignet, weil:
+
+\begin{itemize}
+    \item \textbf{Hinfahrt}: Der Algorithmus läuft von \texttt{head} nach \texttt{tail} und nutzt dabei \texttt{getNext()} -- eine natürliche Vorwärtstraversierung.
+    \item \textbf{Rückfahrt}: Der Algorithmus läuft von \texttt{tail} nach \texttt{head} und nutzt \texttt{getPrev()} -- eine natürliche Rückwärtstraversierung.
+    \item \textbf{Lokale Kollisionsprüfung}: \texttt{isKollision()} benötigt nur den aktuellen Knoten und \texttt{this.next} -- es ist kein globaler Zugriff auf den gesamten Plan notwendig.
+    \item \textbf{Dynamische Länge}: Die Liste wächst beim Einlesen der Daten automatisch, ohne dass vorab die Anzahl der Bahnhöfe bekannt sein muss.
+\end{itemize}
+
+\subsection{SimulationsDaten -- Java Record}
+
+\begin{lstlisting}[caption={SimulationsDaten als Record}]
+public record SimulationsDaten(BahnhofPlan plan, int startZeit) {}
+\end{lstlisting}
+
+Ein Java-\texttt{record} ist ein kompakter unveränderlicher Datenträger. Er kapselt den gelesenen \texttt{BahnhofPlan} und die Startzeit der Hinfahrt in einem einzigen Objekt, das \texttt{EingabeLeser} zurückgibt und \texttt{Main} weiterverarbeitet.
+
+\subsection{Das Strategy Pattern}
+
+Die abstrakte Klasse \texttt{FahrplanStrategie} bildet die gemeinsame Schnittstelle aller drei Strategien:
+
+\begin{lstlisting}[caption={Abstrakte Basisklasse FahrplanStrategie}]
+public abstract class FahrplanStrategie {
+    public abstract String getStrategieName();
+    public abstract void berechneFahrplan(BahnhofPlan plan, int startZeit);
+    public abstract int getSummeStrafen();
+    public abstract int getSummeWarteZeit();
+    protected BahnhofPlan aktuellerPlan;
+    // Gemeinsame statische Hilfsmethoden fuer alle Strategien ...
+}
+\end{lstlisting}
+
+Der Vorteil einer abstrakten Klasse gegenüber einem Interface liegt darin, dass gemeinsam genutzte Hilfsmethoden (\texttt{hinfahrtOhneKollision}, \texttt{rueckfahrtMitKollision}, \texttt{beidseitigesWarten} usw.) direkt dort als \texttt{static}-Methoden implementiert werden können. Alle konkreten Strategien erben diese Methoden und rufen sie auf.
+
+In \texttt{Main.java} werden alle drei Strategien gleichartig behandelt:
+
+\begin{lstlisting}[caption={Verwendung des Strategy Patterns in Main}]
+FahrplanStrategie[] strategien = {
+    new EinfacheFahrtStrategie(),
+    new EinseitigesWartenStrategie(),
+    new BeidseitigesWartenStrategie()
+};
+for (FahrplanStrategie strategie : strategien) {
+    strategie.berechneFahrplan(plan, startZeit);
+    gesamtausgabe.append(AusgabeManager.druckeErgebnis(strategie, plan));
+}
+\end{lstlisting}
+
+Der aufrufende Code benötigt keine \texttt{if-else}-Kette. Neue Strategien können einfach hinzugefügt werden, indem man \texttt{FahrplanStrategie} erweitert und das neue Objekt ins Array aufnimmt.
+
+% ─────────────────────────────────────────
+\section{Einlesen und Initialisieren der Daten}
+
+\subsection{Eingabedateiformat}
+
+Die Eingabedateien haben folgendes Format (Schlüsselwort in einer Zeile, Wert in der nächsten):
+
+\begin{verbatim}
+Strecke:
+A B C D E F G
+Abstaende:
+5 8 6 7 3 2
+Start Hinfahrt:
+17
+\end{verbatim}
+
+\begin{itemize}
+    \item \textbf{Strecke}: Die Bahnhofsnamen, durch Leerzeichen getrennt.
+    \item \textbf{Abstaende}: Die Fahrtzeit (in Minuten) zwischen je zwei aufeinanderfolgenden Bahnhöfen. Bei $n$ Bahnhöfen gibt es $n-1$ Abstände.
+    \item \textbf{Start Hinfahrt}: Die Abfahrtszeit des Zuges am ersten Bahnhof (Minuten, Modulo 60).
+\end{itemize}
+
+\subsection{Einleseprozess (EingabeLeser)}
+
+Die Klasse \texttt{EingabeLeser} liest die Datei zeilenweise ein und erkennt die Schlüsselwörter per einfachem String-Vergleich:
+
+\begin{lstlisting}[caption={Kernteil von EingabeLeser.leseDatei()}]
+List<String> zeilen = Files.readAllLines(Path.of(dateiPfad));
+BahnhofPlan bahnhofPlan = new BahnhofPlan();
+int startZeit = 0;
+
+for (int i = 0; i < zeilen.size(); i++) {
+    String aktuelleZeile = zeilen.get(i).trim();
+    if (aktuelleZeile.equals("Strecke:")) {
+        String[] bahnhoefe = zeilen.get(i + 1).split("\\s+");
+        for (String name : bahnhoefe)
+            bahnhofPlan.addBahnhof(name);
+    } else if (aktuelleZeile.equals("Abstaende:")) {
+        String[] abstaendeStr = zeilen.get(i + 1).trim().split("\\s+");
+        int[] abstaende = new int[abstaendeStr.length];
+        for (int j = 0; j < abstaendeStr.length; j++)
+            abstaende[j] = Integer.parseInt(abstaendeStr[j]);
+        bahnhofPlan.setAbstaende(abstaende);
+    } else if (aktuelleZeile.equals("Start Hinfahrt:")) {
+        startZeit = Integer.parseInt(zeilen.get(i + 1).trim());
+    }
+}
+return new SimulationsDaten(bahnhofPlan, startZeit);
+\end{lstlisting}
+
+\begin{enumerate}
+    \item Beim Schlüsselwort \texttt{Strecke:} wird für jeden Bahnhofsnamen ein neuer \texttt{BahnhofNode} angelegt und per \texttt{addBahnhof()} an die Liste angehängt.
+    \item Beim Schlüsselwort \texttt{Abstaende:} werden die Abstände als \texttt{int[]} geparst und per \texttt{setAbstaende()} jedem Knoten sein \texttt{distanceToNext}-Wert zugewiesen.
+    \item Beim Schlüsselwort \texttt{Start Hinfahrt:} wird die Startzeit als \texttt{int} gespeichert.
+    \item Das Ergebnis wird als \texttt{SimulationsDaten}-Record zurückgegeben.
+\end{enumerate}
+
+% ─────────────────────────────────────────
+\section{Kollisionserkennung}
+
+\subsection{Definition einer Kollision}
+
+Eine \textbf{Kollision} tritt auf, wenn sich Hin- und Rückzug \textbf{gleichzeitig auf demselben Streckenabschnitt} befinden. Ein Streckenabschnitt liegt zwischen zwei aufeinanderfolgenden Bahnhöfen, z.\,B. zwischen Bahnhof B und Bahnhof C.
+
+\begin{itemize}
+    \item \textbf{Hinfahrt} auf dem Abschnitt B$\to$C: Der Zeitraum beginnt mit der Abfahrt des Hinzuges bei B (\texttt{abfahrthin}) und endet mit seiner Ankunft bei C (\texttt{ankunfthin}).
+    \item \textbf{Rückfahrt} auf dem Abschnitt C$\to$B: Der Zeitraum beginnt mit der Abfahrt des Rückzuges bei C (\texttt{abfahrtrueck}) und endet mit seiner Ankunft bei B (\texttt{ankunftrueck}).
+\end{itemize}
+
+Eine Kollision liegt vor, genau dann wenn sich diese zwei Zeitintervalle \textbf{überschneiden}.
+
+\subsection{Uhrzeitmodell (Modulo-60-Uhr)}
+
+Die Zeit wird als Minutenwert modulo 60 dargestellt, d.\,h. nach Minute 59 folgt wieder Minute 0. Ein Intervall kann daher über den „Stundenwechsel" gehen (z.\,B. von Minute 55 bis Minute 05).
+
+\subsection{Implementierung: isKollision()}
+
+Die Methode \texttt{isKollision()} gehört zur Klasse \texttt{BahnhofNode} und prüft den Abschnitt \emph{zwischen diesem Knoten und seinem Nachfolger}:
+
+\begin{lstlisting}[caption={BahnhofNode.isKollision()}]
+public boolean isKollision() {
+    if (this.next == null) return false; // letzter Bahnhof: kein Abschnitt danach
+
+    int hStart = this.abfahrthin;       // Hinzug faehrt ab bei diesem Bahnhof
+    int hEnde  = this.next.getAnkunfthin(); // Hinzug kommt an beim naechsten
+
+    int rStart = this.next.getAbfahrtrueck(); // Rueckzug faehrt ab beim naechsten
+    int rEnde  = this.ankunftrueck;           // Rueckzug kommt an bei diesem Bahnhof
+
+    return checkOverlap(hStart, hEnde, rStart, rEnde);
+}
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Intervall-Überschneidungsprüfung}]
+private boolean checkOverlap(int s1, int e1, int s2, int e2) {
+    for (int m = 0; m < 60; m++) {
+        if (isTimeInInterval(m, s1, e1) && isTimeInInterval(m, s2, e2))
+            return true;
+    }
+    return false;
+}
+
+private boolean isTimeInInterval(int t, int start, int ende) {
+    if (start <= ende) {
+        return t >= start && t <= ende;   // Normalfall
+    } else {
+        return t >= start || t <= ende;   // Uebermitternacht
+    }
+}
+\end{lstlisting}
+
+Die Methode \texttt{checkOverlap()} iteriert alle 60 möglichen Minutenwerte und prüft, ob ein Zeitpunkt \texttt{m} in \textbf{beiden} Intervallen liegt. Die Hilfsmethode \texttt{isTimeInInterval()} behandelt dabei korrekt den Sonderfall, dass ein Intervall über den Stundenwechsel geht.
+
+\subsection{Konkretes Beispiel: Kollisionsprüfung an Bahnhof B (Beispiel2)}
+
+\begin{beispielbox}[title={Beispiel2: Strecke A--B--C--D--E--F--G, Abstände: 5 8 6 7 3 2, Start: 17}]
+Hinfahrt (ohne Kollisionsbehandlung):
+\begin{center}
+\begin{tabular}{lcccccc}
+\toprule
+ & A & B & C & D & E & F & G \\
+\midrule
+Ankunft Hin & -- & 22 & 31 & 38 & 46 & 50 & 53 \\
+Abfahrt Hin & 17 & 23 & 32 & 39 & 47 & 51 & -- \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Rückfahrt (ohne Kollisionsbehandlung, Startzeit = 54):
+\begin{center}
+\begin{tabular}{lcccccc}
+\toprule
+ & A & B & C & D & E & F & G \\
+\midrule
+Abfahrt Rück & -- & 25 & 16 & 09 & 01 & 57 & 54 \\
+Ankunft Rück & 30 & 24 & 15 & 08 & 00 & 56 & -- \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Kollisionsprüfung am Abschnitt B$\to$C} (Knoten B, \texttt{isKollision()}):
+\begin{align*}
+\text{Hinzug auf B}\to\text{C:} &\quad [\texttt{abfahrthin}(B),\; \texttt{ankunfthin}(C)] = [23,\; 31] \\
+\text{Rückzug auf C}\to\text{B:} &\quad [\texttt{abfahrtrueck}(C),\; \texttt{ankunftrueck}(B)] = [16,\; 24]
+\end{align*}
+
+Schnittmenge: $t = 23$ und $t = 24$ liegen in \textbf{beiden} Intervallen $\Rightarrow$ \textbf{KOLLISION!}
+
+Die Ausgabe markiert diesen Abschnitt mit einem \texttt{x} zwischen B und C.
+\end{beispielbox}
+
+% ─────────────────────────────────────────
+\section{Strategie 1: Einfache Fahrt}
+
+\subsection{Beschreibung}
+
+Die \textbf{Einfache Fahrt} berechnet Hin- und Rückfahrt vollständig ohne Rücksicht auf etwaige Kollisionen. Es wird keine Wartezeit eingebaut. Kollisionen werden lediglich erkannt und in der Ausgabe mit einem \texttt{x} markiert, aber nicht aufgelöst.
+
+\subsection{Algorithmus}
+
+\textbf{Hinfahrt} (\texttt{hinfahrtOhneKollision}):
+\begin{enumerate}
+    \item Der erste Bahnhof (Head) erhält \texttt{abfahrthin = startZeit}.
+    \item Für jeden weiteren Bahnhof gilt:
+    \begin{align*}
+        \texttt{ankunfthin}_{i+1} &= (\texttt{abfahrthin}_i + \texttt{distanceToNext}_i) \bmod 60 \\
+        \texttt{abfahrthin}_{i+1} &= (\texttt{ankunfthin}_{i+1} + 1) \bmod 60
+    \end{align*}
+    Der $+1$-Term steht für die obligatorische Haltezeit von einer Minute an jedem Zwischenbahnhof.
+\end{enumerate}
+
+\textbf{Rückfahrt} (\texttt{rueckfahrtOhneKollision}):
+\begin{enumerate}
+    \item Die Rückfahrt startet, sobald der Hinzug am letzten Bahnhof angekommen ist: $\texttt{startZeitRueck} = (\texttt{ankunfthin}_\text{tail} + 1) \bmod 60$.
+    \item Vom letzten Bahnhof rückwärts wird analog berechnet:
+    \begin{align*}
+        \texttt{ankunftrueck}_{i-1} &= (\texttt{abfahrtrueck}_i + \texttt{distanceToNext}_{i-1}) \bmod 60 \\
+        \texttt{abfahrtrueck}_{i-1} &= (\texttt{ankunftrueck}_{i-1} + 1) \bmod 60
+    \end{align*}
+\end{enumerate}
+
+\textbf{Strafe}: Da keine Wartezeiten anfallen, ist die Strafe immer $0$.
+
+\subsection{Beispiel: Beispiel2}
+
+\begin{beispielbox}[title={Einfache Fahrt -- Beispiel2 (A--B--C--D--E--F--G, Start: 17)}]
+\begin{center}
+\begin{tabular}{r|ccccccc}
+ & A & B & C & D & E & F & G \\
+\hline
+An Hin  &    & 22 & 31 & 38 & 46 & 50 & 53 \\
+Wa Hin  &    &    &    &    &    &    &    \\
+Ab Hin  & 17 & 23 & 32 & 39 & 47 & 51 &    \\
+\hline
+Bahnhof & A  & B\textbf{x} & C & D & E & F & G \\
+\hline
+Ab Rück &    & 25 & 16 & 09 & 01 & 57 & 54 \\
+Wa Rück &    &    &    &    &    &    &    \\
+An Rück & 30 & 24 & 15 & 08 & 00 & 56 &    \\
+\end{tabular}
+\end{center}
+Gesamtdauer Hin/Rück: 36 / 36 \quad Wartezeit: 0 / 0 \quad Strafe: 0
+
+Das \textbf{x} bei B zeigt die Kollision auf dem Abschnitt B$\to$C an.
+\end{beispielbox}
+
+% ─────────────────────────────────────────
+\section{Strategie 2: Einseitiges Warten}
+
+\subsection{Beschreibung}
+
+Beim \textbf{Einseitigen Warten} bleibt die Hinfahrt unverändert (identisch zur Einfachen Fahrt). Der \textbf{Rückzug} hält jedoch an Bahnhöfen, wo eine Kollision droht, und wartet so lange, bis der Hinzug den betreffenden Abschnitt freigegeben hat.
+
+\subsection{Algorithmus}
+
+Die Methode \texttt{rueckfahrtMitKollision()} arbeitet in zwei Phasen:
+
+\textbf{Phase 1}: Berechnung der Rückfahrt \emph{ohne} Kollisionsbehandlung (wie bei der Einfachen Fahrt), um eine Ausgangsbasis zu haben.
+
+\textbf{Phase 2}: Traversierung von \texttt{tail.prev} bis \texttt{head} (also von hinten nach vorne), wobei an jedem Knoten $i$ überprüft wird, ob der Vorgänger-Abschnitt ($i-1 \to i$) eine Kollision hat. Wenn ja, muss der Rückzug bei Knoten $i$ warten:
+
+\begin{align*}
+    \texttt{wartezeitRueck}_i &= (\texttt{ankunfthin}_i - \texttt{ankunftrueck}_i + 60) \bmod 60
+\end{align*}
+
+Diese Formel berechnet, wie lange der Rückzug bei Knoten $i$ warten muss, damit er frühestens dann abfährt, wenn der Hinzug den Abschnitt verlassen hat (d.\,h. am Folgebahnhof angekommen ist). Die $+60$ und $\bmod 60$ behandeln den Fall, dass die Zeiten über den Stundenwechsel gehen.
+
+Die Abfahrtszeit wird dann entsprechend nach hinten verschoben:
+\begin{align*}
+    \texttt{abfahrtrueck}_i &= (\texttt{ankunftrueck}_i + \texttt{wartezeitRueck}_i + 1) \bmod 60
+\end{align*}
+
+\textbf{Strafe}:
+\begin{align*}
+    \text{Strafe} = \left(\sum_i \texttt{wartezeitRueck}_i\right)^2
+\end{align*}
+
+\subsection{Konkretes Beispiel: Beispiel2}
+
+\begin{beispielbox}[title={Einseitiges Warten -- Beispiel2 (A--B--C--D--E--F--G, Start: 17)}]
+
+\textbf{Phase 1} (Rückfahrt ohne Kollision, Startzeit G = 54):
+Der Rückzug fährt zunächst planmäßig: G:54, F:57/56, E:01/00, D:09/08, C:16/15, B:25/24, A:30.
+
+\textbf{Kollisionsprüfung} bei Abschnitt B$\to$C (Knoten B):
+\begin{align*}
+\text{Hinzug B}\to\text{C:} &\quad [23, 31] \\
+\text{Rückzug C}\to\text{B:} &\quad [16, 24] \quad\Rightarrow\quad \textbf{KOLLISION!}
+\end{align*}
+
+\textbf{Wartezeit} bei C:
+\begin{align*}
+\texttt{wartezeitRueck}(C) &= (31 - 15 + 60) \bmod 60 = 16 \text{ Minuten}
+\end{align*}
+
+Der Rückzug wartet 16 Minuten bei C und fährt erst um Minute 32 ab. Die nachfolgenden Knoten (B, A) werden neu berechnet.
+
+\textbf{Endergebnis}:
+\begin{center}
+\begin{tabular}{r|ccccccc}
+ & A & B & C & D & E & F & G \\
+\hline
+An Hin  &    & 22 & 31 & 38 & 46 & 50 & 53 \\
+Wa Hin  &    &    &    &    &    &    &    \\
+Ab Hin  & 17 & 23 & 32 & 39 & 47 & 51 &    \\
+\hline
+Bahnhof & A  & B  & C  & D  & E  & F  & G  \\
+\hline
+Ab Rück &    & 41 & 32 & 09 & 01 & 57 & 54 \\
+Wa Rück &    &    & 16 &    &    &    &    \\
+An Rück & 46 & 40 & 15 & 08 & 00 & 56 &    \\
+\end{tabular}
+\end{center}
+
+Gesamtdauer Hin/Rück: 36 / 52 \quad Wartezeit: 0 / 16 \quad Strafe: $16^2 = \mathbf{256}$
+\end{beispielbox}
+
+% ─────────────────────────────────────────
+\section{Strategie 3: Beidseitiges Warten}
+
+\subsection{Beschreibung}
+
+Das \textbf{Beidseitige Warten} versucht, die anfallende Wartezeit gleichmäßig auf Hin- und Rückzug zu verteilen, um die Gesamtstrafe zu minimieren. Da die Strafe quadratisch berechnet wird, ist eine gleichmäßige Aufteilung mathematisch besser als das einseitige Warten des gesamten Betrags auf einem Zug.
+
+Die Strategie arbeitet in zwei Schritten:
+
+\begin{enumerate}
+    \item \textbf{Optimale Startzeitsuche}: Es werden alle 60 möglichen Abfahrtszeiten der Rückfahrt ausprobiert. Für jede Startzeit wird der Fahrplan mit \texttt{rueckfahrtMitKollision()} berechnet und die Strafe ermittelt. Die Startzeit mit der niedrigsten Strafe wird gewählt.
+    \item \textbf{Beidseitige Warteverteilung}: Wenn nach Schritt 1 noch Kollisionen bestehen, wird die verbleibende Wartezeit via \texttt{beidseitigesWarten()} hälftig auf Hin- und Rückzug verteilt.
+\end{enumerate}
+
+\subsection{Algorithmus}
+
+\textbf{Schritt 1 -- Optimale Startzeitsuche}:
+
+\begin{lstlisting}[caption={Suche nach der besten Rückfahrt-Startzeit}]
+for (int i = 0; i < 60; i++) {
+    rueckfahrtMitKollision(aktuellerPlan, i);
+    if (aktuellerPlan.getTail().getPrev().isKollision()) continue;
+    int strafe = getSummeStrafen();
+    if (strafe < besteStrafe) {
+        besteStrafe = strafe;
+        besteStartzeitRueck = i;
+    }
+}
+\end{lstlisting}
+
+Wenn eine Startzeit dazu führt, dass der vorletzte Bahnhof (direkt neben dem Endbahnhof) noch eine Kollision hat, wird diese Startzeit übersprungen.
+
+\textbf{Schritt 2 -- Hälftige Aufteilung} (\texttt{beidseitigesWarten()}):
+
+Für jeden Bahnhof mit \texttt{wartezeitRueck > 0} wird die Wartezeit geteilt:
+\begin{align*}
+\texttt{wartezeitHin}_i &= \left\lfloor \texttt{wartezeitRueck}_i \,/\, 2 \right\rfloor \\
+\texttt{wartezeitRueck}_i &= \texttt{wartezeitRueck}_i - \texttt{wartezeitHin}_i
+\end{align*}
+
+(Bei ungeraden Wartezeiten bekommt die Rückfahrt eine Minute mehr.)
+
+Durch die Hinwartezeiten verschiebt sich auch die Abfahrt des Hinzuges nach hinten, was wiederum die Ankunft am Endbahnhof nach hinten schiebt und damit den optimalen Startzeitpunkt der Rückfahrt beeinflusst. Deshalb wird die Hinfahrt danach mit \texttt{hinfahrtMitKollision()} und die Rückfahrt mit der angepassten Startzeit neu berechnet.
+
+\textbf{Strafe}:
+\begin{align*}
+    \text{Strafe} = \left(\sum_i \texttt{wartezeitHin}_i\right)^2 + \left(\sum_i \texttt{wartezeitRueck}_i\right)^2
+\end{align*}
+
+\subsection{Beispiel: Beispiel2}
+
+\begin{beispielbox}[title={Beidseitiges Warten -- Beispiel2 (A--B--C--D--E--F--G, Start: 17)}]
+
+\textbf{Suche der besten Startzeit}:
+Durch Ausprobieren aller 60 Startzeitpunkte ergibt sich, dass bei Startzeit $= 10$ \emph{überhaupt keine Kollision} auf dem Abschnitt B$\to$C entsteht:
+
+\begin{align*}
+\text{Hinzug B}\to\text{C:} &\quad [23, 31] \\
+\text{Rückzug C}\to\text{B bei Startzeit 10:} &\quad [\texttt{abfahrtrueck}(C), \texttt{ankunftrueck}(B)] = [41, 49]
+\end{align*}
+
+Die Intervalle $[23, 31]$ und $[41, 49]$ schneiden sich \textbf{nicht} $\Rightarrow$ keine Kollision, Strafe $= 0$.
+
+Da \texttt{besteStartzeitRueck = 10 $\neq$ 0} wird \texttt{beidseitigesWarten()} aufgerufen. Da aber alle \texttt{wartezeitRueck = 0} sind, ändert sich nichts.
+
+\textbf{Endergebnis}:
+\begin{center}
+\begin{tabular}{r|ccccccc}
+ & A & B & C & D & E & F & G \\
+\hline
+An Hin  &    & 22 & 31 & 38 & 46 & 50 & 53 \\
+Wa Hin  &    &    &    &    &    &    &    \\
+Ab Hin  & 17 & 23 & 32 & 39 & 47 & 51 &    \\
+\hline
+Bahnhof & A  & B  & C  & D  & E  & F  & G  \\
+\hline
+Ab Rück &    & 41 & 32 & 25 & 17 & 13 & 10 \\
+Wa Rück &    &    &    &    &    &    &    \\
+An Rück & 46 & 40 & 31 & 24 & 16 & 12 &    \\
+\end{tabular}
+\end{center}
+
+Gesamtdauer Hin/Rück: 36 / 36 \quad Wartezeit: 0 / 0 \quad Strafe: $\mathbf{0}$
+
+Durch die geschickte Wahl der Startzeit der Rückfahrt wurde die Kollision vollständig vermieden, ohne dass ein Zug warten musste.
+\end{beispielbox}
+
+\subsection{Vergleich der drei Strategien an Beispiel2}
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Strategie} & \textbf{Gesamtdauer Hin/Rück} & \textbf{Gesamtwartezeit} & \textbf{Strafe} \\
+\midrule
+Einfache Fahrt & 36 / 36 & 0 / 0 & 0 \\
+Einseitiges Warten & 36 / 52 & 0 / 16 & 256 \\
+Beidseitiges Warten & 36 / 36 & 0 / 0 & 0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{hinweisbox}
+Die Einfache Fahrt zeigt im Ergebnis ebenfalls Strafe 0, weil sie Kollisionen gar nicht erst behebt und keine Wartezeiten einbaut -- sie ignoriert das Problem. Das ``Beidseitige Warten'' löst die Kollision jedoch korrekt auf, indem es die Rückfahrt so startet, dass sich die Züge nicht begegnen.
+\end{hinweisbox}
+
+% ─────────────────────────────────────────
+\section{Ausgabe}
+
+\subsection{Format der Ausgabe (AusgabeManager)}
+
+Die Ausgabe erfolgt in einem horizontalen tabellarischen Format, bei dem die Bahnhöfe als Spalten dargestellt sind:
+
+\begin{verbatim}
+Einfache Fahrt:
+An     22  31  38  46  50  53
+Wa
+Ab 17  23  32  39  47  51
+    A   Bx  C   D   E   F   G
+Ab     25  16  09  01  57  54
+Wa
+An 30  24  15  08  00  56
+\end{verbatim}
+
+\begin{itemize}
+    \item \textbf{An / Wa / Ab (oben)}: Ankunft, Wartezeit, Abfahrt der Hinfahrt.
+    \item \textbf{Bahnhofzeile}: Bahnhofsnamen; ein \texttt{x} zwischen zwei Namen zeigt eine Kollision auf dem Abschnitt an.
+    \item \textbf{Ab / Wa / An (unten)}: Abfahrt, Wartezeit, Ankunft der Rückfahrt. (Achtung: Abfahrt steht oben, weil der Rückzug von rechts kommt und die Reihenfolge gespiegelt ist.)
+    \item \textbf{Zusammenfassung}: Gesamtdauer Hin/Rück, Summe Wartezeiten, Summe Strafen.
+\end{itemize}
+
+\subsection{Speicherung}
+
+Die Ergebnisse aller Strategien einer Eingabedatei werden in eine Ausgabedatei im Verzeichnis \texttt{ausgabe/} geschrieben:
+\begin{center}
+\texttt{ausgabe/<dateiname>\_ergebnis.txt}
+\end{center}
+
+% ─────────────────────────────────────────
+\section{Zusammenfassung}
+
+Das Programm setzt das \textbf{Strategy Pattern} ein, um drei verschiedene Fahrplanberechnungsalgorithmen hinter einer einheitlichen Schnittstelle (\texttt{FahrplanStrategie}) zu kapseln. Die Kernalgorithmen werden als gemeinsame statische Methoden in der Basisklasse implementiert und von den konkreten Strategien wiederverwendet.
+
+Die Bahnhöfe werden als \textbf{doppelt verkettete Liste} modelliert. Dieses Datenstruktur ermöglicht eine natürliche Traversierung in beide Richtungen (Hin- und Rückfahrt) und eine lokale Kollisionsprüfung, die nur den aktuellen Knoten und seinen direkten Nachbarn benötigt.
+
+Die \textbf{Kollisionserkennung} basiert auf einer Intervall-Überschneidungsprüfung auf einer Modulo-60-Uhr, die auch den Übergang von Minute 59 auf Minute 0 korrekt behandelt.
+
+Die \textbf{Wartezeitstrategie} wird von keiner Wartezeit (Einfache Fahrt) über einseitiges Warten (nur Rückzug) bis hin zur hälftigen Aufteilung (Beidseitiges Warten) skaliert, wobei die quadratische Strafformel dafür sorgt, dass eine gleichmäßige Verteilung immer mindestens so gut ist wie eine einseitige.
+
+\end{document}
