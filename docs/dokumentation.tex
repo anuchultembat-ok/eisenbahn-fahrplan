@@ -1,0 +1,503 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[ngerman]{babel}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+
+\geometry{left=2.5cm, right=2.5cm, top=3cm, bottom=3cm}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{MATSE-Eisenbahngesellschaft -- Fahrplansystem}
+\lhead{IHK Abschlussprüfung Sommer 2026}
+\rfoot{Seite \thepage}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue},
+  commentstyle=\color{gray},
+  stringstyle=\color{red},
+  breaklines=true,
+  frame=single,
+  language=Java,
+  showstringspaces=false,
+}
+
+% -----------------------------------------------------------------------
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{2cm}
+  {\LARGE\bfseries Entwicklung eines Mathematisch-technischen Softwaresystems\\[0.5em]}
+  {\large IHK Abschlussprüfung Sommer 2026 -- 6511\\[1em]}
+  {\large\bfseries Fahrplanoptimierung für eingleisige Eisenbahnstrecken\\[2em]}
+  {\large MATSE-Eisenbahngesellschaft\\[3em]}
+  \vfill
+  {\normalsize Abgabedatum: \today}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% -----------------------------------------------------------------------
+\section{Aufgabenanalyse und Verfahrensbeschreibung}
+
+\subsection{Aufgabenanalyse}
+
+Die MATSE-Eisenbahngesellschaft betreibt eingleisige Strecken, auf denen sich
+entgegenkommende Züge nur an Bahnhöfen begegnen dürfen. Ziel ist die Berechnung
+eines getakteten Fahrplans, der:
+\begin{itemize}
+  \item Kollisionen zwischen Hin- und Rückfahrt-Zügen verhindert,
+  \item Wartezeiten minimiert und möglichst gleichmäßig auf beide Richtungen verteilt,
+  \item einen 60-Minuten-Takt einhält (jeder Zug fährt stündlich am selben Bahnhof ab),
+  \item eine Haltezeit von 1\,Minute je Zwischenbahnhof sowie eine Sicherheitswartezeit
+        von 1\,Minute nach Einfahrt eines Gegenzugs berücksichtigt.
+\end{itemize}
+
+\noindent
+Es sind drei Strategien zu implementieren:
+\begin{enumerate}
+  \item \textbf{Einfache Fahrt} -- Referenzplan ohne Kollisionsvermeidung.
+  \item \textbf{Einseitiges Warten} -- Rückfahrt wartet auf freien Streckenabschnitt.
+  \item \textbf{Beidseitiges Warten} -- Wartezeiten werden auf beide Richtungen aufgeteilt.
+\end{enumerate}
+
+% -----------------------------------------------------------------------
+\subsection{Entwurf des Einlesens und der Initialisierung der Daten}
+
+Die Eingabedatei besteht aus drei Abschnitten:
+\begin{itemize}
+  \item \texttt{Strecke:} -- durch Whitespace getrennte Bahnhofsnamen (eine Zeile).
+  \item \texttt{Abstaende:} -- Fahrzeiten (Minuten) zwischen aufeinanderfolgenden
+        Bahnhöfen (eine Zeile mit $n-1$ Werten für $n$ Bahnhöfe).
+  \item \texttt{Start Hinfahrt:} -- Abfahrtszeit der Hinfahrt am ersten Bahnhof (reine Minutenangabe).
+\end{itemize}
+
+\noindent
+Die Klasse \texttt{EingabeLeser} liest die Datei zeilenweise ein, erkennt die
+Schlüsselwörter und befüllt ein \texttt{BahnhofPlan}-Objekt mit den Bahnhöfen
+und Abständen sowie die Startzeit für die Simulation.
+
+% -----------------------------------------------------------------------
+\subsection{Kollisionserkennung und Wartezeitermittlung}
+
+Eine Kollision liegt vor, wenn sich Hin- und Rückfahrtzug gleichzeitig auf
+demselben Streckenabschnitt (zwischen zwei Bahnhöfen) befinden. \\[0.3em]
+
+\noindent
+Sei $[h_{\text{start}},\, h_{\text{ende}}]$ das Zeitfenster des Hinfahrtzugs und
+$[r_{\text{start}},\, r_{\text{ende}}]$ das des Rückfahrtzugs auf einem Abschnitt.
+Eine Kollision tritt auf, wenn sich diese Intervalle im 60-Minuten-Takt
+\emph{überschneiden}. Da Zeiten modulo\,60 gerechnet werden, prüft die Methode
+\texttt{isKollision()} für jede Minute $m \in [0,59]$, ob $m$ in beiden
+Intervallen liegt.
+
+\bigskip
+\noindent
+Die zusätzliche Wartezeit an einem Bahnhof $B$ berechnet sich als:
+\[
+  w_B = \bigl(\text{Ankunft}_{\text{Hin}}(B) - \text{Ankunft}_{\text{Rück}}(B) + 60\bigr) \bmod 60
+\]
+
+% -----------------------------------------------------------------------
+\subsection{Entwurf eines Algorithmus zur Durchführung der Strategie „Einfache Fahrt"}
+
+\begin{itemize}
+  \item Die Hinfahrt startet zur gegebenen Startzeit und fährt an jedem Bahnhof
+        nach genau 1\,Minute Halt schnellstmöglich weiter.
+  \item Die Rückfahrt startet unmittelbar nach Ankunft am Endbahnhof
+        (Ankunftszeit + 1\,Minute Halt).
+  \item Es wird \emph{keinerlei} Rücksicht auf den Folgeabschnitt genommen.
+  \item Kollisionen werden erkannt und in der Ausgabe mit \texttt{x} markiert;
+        der Plan wird trotzdem ausgegeben (als Referenz).
+  \item Wartezeiten: $w_{\text{Hin}} = 0$, $w_{\text{Rück}} = 0$,
+        Score $= 0^2 + 0^2 = 0$.
+\end{itemize}
+
+% -----------------------------------------------------------------------
+\subsection{Entwurf eines Algorithmus zur Durchführung der Strategie „Einseitiges Warten"}
+
+\begin{itemize}
+  \item Die \textbf{Hinfahrt} wird identisch zu „Einfache Fahrt" berechnet
+        (schnellstmögliche kollisionsfreie Verbindung).
+  \item Die \textbf{Rückfahrt} startet direkt nach Ankunft des Hinfahrtzugs am
+        Endbahnhof (inkl. Sicherheitswartezeit von 1\,Minute).
+  \item Vor jedem Abfahren vom aktuellen Bahnhof $B$ in Richtung $B-1$ wird
+        geprüft, ob der Streckenabschnitt $[B, B-1]$ frei ist:
+        \begin{enumerate}
+          \item Falls \emph{keine} Kollision droht: sofortige Abfahrt.
+          \item Falls eine Kollision droht: Warten, bis der Gegenzug in $B$
+                eingetroffen ist, dann erst Abfahrt (nach 1\,Minute Sicherheitswartezeit).
+        \end{enumerate}
+  \item Die Wartezeiten kumulieren sich ausschließlich auf der Rückfahrt.
+  \item Score $= 0^2 + \left(\sum w_{\text{Rück}}\right)^2$.
+\end{itemize}
+
+% -----------------------------------------------------------------------
+\subsection{Entwurf eines Algorithmus zur Durchführung der Strategie „Beidseitiges Warten"}
+
+\begin{itemize}
+  \item Ausgangspunkt ist das Ergebnis der Strategie „Einseitiges Warten"
+        mit den berechneten Wartezeiten je Bahnhof auf der Rückfahrt.
+  \item Für jeden Bahnhof $B$ mit $w_{\text{Rück}}(B) > 1$ wird die Wartezeit
+        gleichmäßig aufgeteilt:
+        \[
+          w_{\text{Hin}}(B) = \left\lfloor \frac{w_{\text{Rück}}(B)}{2} \right\rfloor,
+          \quad
+          w_{\text{Rück}}(B) \mathrel{-}= w_{\text{Hin}}(B)
+        \]
+  \item Die Abfahrtszeit der Rückfahrt am Endbahnhof wird um
+        $\Delta = \sum_B w_{\text{Hin}}(B)$ nach vorne verschoben.
+  \item Anschließend werden Hin- und Rückfahrt mit den aktualisierten
+        Wartezeiten neu berechnet (\texttt{hinfahrtMitKollision},
+        \texttt{rueckfahrtMitKollision}).
+  \item Score $= \left(\sum w_{\text{Hin}}\right)^2 + \left(\sum w_{\text{Rück}}\right)^2$.
+\end{itemize}
+
+% -----------------------------------------------------------------------
+\subsection{Entwurf der Ausgabe gemäß Aufgabenstellung}
+
+Die Ausgabe erfolgt je Strategie in tabellarischer Form:
+\begin{enumerate}
+  \item Ankunftszeiten der Hinfahrt (\texttt{An})
+  \item Zusätzliche Wartezeiten der Hinfahrt (\texttt{Wa}) -- leer falls 0
+  \item Abfahrtszeiten der Hinfahrt (\texttt{Ab})
+  \item Bahnhofsnamen -- mit \texttt{x} zwischen zwei Bahnhöfen bei Kollision
+  \item Abfahrtszeiten der Rückfahrt (\texttt{Ab})
+  \item Zusätzliche Wartezeiten der Rückfahrt (\texttt{Wa}) -- leer falls 0
+  \item Ankunftszeiten der Rückfahrt (\texttt{An})
+  \item Kennwerte: Gesamtdauer, Summe Wartezeiten, Score (Summe Strafen)
+\end{enumerate}
+
+% -----------------------------------------------------------------------
+\section{Objektorientierte Programmkonzeption}
+
+\subsection{Entwurf der Klassen, Methoden und Datenstrukturen}
+
+Das Programm nutzt eine doppelt verkettete Liste aus \texttt{BahnhofNode}-Objekten,
+die im \texttt{BahnhofPlan} verwaltet wird. Folgende Klassen wurden entworfen:
+
+\begin{itemize}
+  \item \textbf{BahnhofNode} -- Knoten der Liste; speichert Name, Ankunfts-/Abfahrtszeiten
+        für Hin- und Rückfahrt, Wartezeiten und Abstand zum nächsten Bahnhof.
+  \item \textbf{BahnhofPlan} -- doppelt verkettete Liste der Bahnhöfe; stellt
+        \texttt{head}/\texttt{tail} sowie Methoden zum Aufbau und Reset bereit.
+  \item \textbf{FahrplanStrategie} (abstrakt) -- definiert die Schnittstelle aller
+        Strategien; enthält die gemeinsamen statischen Berechnungsmethoden
+        (\texttt{hinfahrtOhneKollision}, \texttt{rueckfahrtMitKollision}, etc.).
+  \item \textbf{EinfacheFahrtStrategie} -- implementiert „Einfache Fahrt".
+  \item \textbf{EinseitigesWartenStrategie} -- implementiert „Einseitiges Warten".
+  \item \textbf{BeidseitigesWartenStrategie} -- implementiert „Beidseitiges Warten".
+  \item \textbf{EingabeLeser} -- liest und parst die Eingabedatei.
+  \item \textbf{AusgabeManager} -- formatiert und druckt die Ergebnistabellen.
+  \item \textbf{SimulationsDaten} (Record) -- Datencontainer für Plan und Startzeit.
+  \item \textbf{Main} -- Einstiegspunkt; orchestriert Einlesen, Strategieauswahl und Ausgabe.
+\end{itemize}
+
+% -----------------------------------------------------------------------
+\subsection{UML-Sequenzdiagramme für die wesentlichen Abläufe}
+
+Die folgenden wesentlichen Abläufe sind als UML-Sequenzdiagramme zu dokumentieren
+(Diagramme in separater Anlage):
+
+\begin{itemize}
+  \item Programmstart: \texttt{Main} $\to$ \texttt{EingabeLeser} $\to$ \texttt{BahnhofPlan}
+  \item Strategieausführung: \texttt{Main} $\to$ \texttt{FahrplanStrategie}
+        $\to$ \texttt{BahnhofNode} (Kollisionsprüfung)
+  \item Ausgabe: \texttt{Main} $\to$ \texttt{AusgabeManager} $\to$ \texttt{BahnhofNode}
+\end{itemize}
+
+% -----------------------------------------------------------------------
+\subsection{Detaillierte Beschreibung der wesentlichen Methoden}
+
+Die folgenden Methoden sind in Form von Nassi-Shneiderman-Diagrammen oder
+Programmablaufplänen detailliert beschrieben (Diagramme in separater Anlage):
+
+\begin{itemize}
+  \item \texttt{FahrplanStrategie.rueckfahrtMitKollision()} -- Kernlogik von
+        „Einseitiges Warten": iteriert rückwärts über den Plan, prüft Kollision,
+        setzt Wartezeiten.
+  \item \texttt{BahnhofNode.isKollision()} -- prüft Intervallüberschneidung im
+        60-Minuten-Raster für einen Streckenabschnitt.
+  \item \texttt{FahrplanStrategie.beidseitigesWarten()} -- verteilt Wartezeiten
+        hälftig auf beide Richtungen und berechnet den Plan neu.
+  \item \texttt{AusgabeManager.druckeErgebnis()} -- erzeugt die tabellarische
+        Ausgabe je Strategie.
+\end{itemize}
+
+% -----------------------------------------------------------------------
+\section{Dokumentation}
+
+\subsection{Verbale Beschreibung der Kollisionserkennung, Wartezeitermittlung
+            und der drei Strategien}
+
+\subsubsection{Kollisionserkennung}
+Zwei Züge kollidieren auf einem Streckenabschnitt $[B_i, B_{i+1}]$, wenn sich
+ihre Zeitfenster im Takt von 60\,Minuten überlappen. Die Methode
+\texttt{isKollision()} in \texttt{BahnhofNode} prüft für jeden Wert
+$m \in \{0,\ldots,59\}$, ob $m$ sowohl im Hinfahrt-Intervall
+$[h_{\text{dep}}(B_i),\, h_{\text{arr}}(B_{i+1})]$ als auch im
+Rückfahrt-Intervall $[r_{\text{dep}}(B_{i+1}),\, r_{\text{arr}}(B_i)]$ liegt.
+Dabei werden Intervalle, die den Stundenwechsel überschreiten (z.\,B.
+$[55, 05]$), korrekt behandelt.
+
+\subsubsection{Wartezeitermittlung}
+Muss ein Rückfahrtzug in Bahnhof $B$ warten, so berechnet sich die Wartezeit als
+Differenz zwischen der Ankunft des Gegenzugs und der eigenen (frühestmöglichen)
+Abfahrt, zuzüglich der Sicherheitswartezeit von 1\,Minute.
+
+\subsubsection{Einfache Fahrt -- am Beispiel}
+Eingabe (7 Bahnhöfe, Abstände 5\,8\,6\,7\,3\,2, Start 17\,min):
+Die Hinfahrt fährt: $17 \xrightarrow{5} 22 \xrightarrow{+1} 23 \xrightarrow{8}
+31 \xrightarrow{+1} \ldots$
+Die Rückfahrt startet sofort nach Ankunft. Zwischen B und C tritt eine Kollision
+auf ($\to$ Markierung mit \texttt{x} in der Ausgabe).
+
+\subsubsection{Einseitiges Warten -- am Beispiel}
+Die Hinfahrt ist identisch. Am Bahnhof C (Rückfahrt) wird eine drohende Kollision
+erkannt: der Rückfahrtzug wartet 16\,Minuten. Score $= 16^2 = 256$.
+
+\subsubsection{Beidseitiges Warten -- am Beispiel}
+Die 16\,Warteminuten aus der Rückfahrt werden nicht verwendet;
+durch eine andere Wahl der Rückfahrt-Startzeit lässt sich die Begegnung
+in Bahnhof E verlegen, ohne zusätzliche Wartezeit. Score $= 0$.
+
+% -----------------------------------------------------------------------
+\subsection{Entwicklerdokumentation und Benutzeranleitung}
+
+\subsubsection{Entwicklerdokumentation}
+
+\paragraph{Voraussetzungen}
+\begin{itemize}
+  \item Java 17 oder höher
+  \item Apache Maven 3.8 oder höher
+\end{itemize}
+
+\paragraph{Build}
+\begin{lstlisting}[language=bash]
+mvn compile
+\end{lstlisting}
+
+\paragraph{Ausführung}
+\begin{lstlisting}[language=bash]
+# Aus dem übergeordneten Verzeichnis aufrufen,
+# damit der relative Pfad zur Datei stimmt:
+mvn exec:java -Dexec.mainClass="de.matse.ihk.Main"
+\end{lstlisting}
+
+\paragraph{Projektstruktur}
+\begin{lstlisting}
+eisenbahn-fahrplan/
+  src/main/java/de/matse/ihk/
+    BahnhofNode.java           -- Listenknoten
+    BahnhofPlan.java           -- Doppelt verkettete Liste
+    FahrplanStrategie.java     -- Abstrakte Basisklasse
+    EinfacheFahrtStrategie.java
+    EinseitigesWartenStrategie.java
+    BeidseitigesWartenStrategie.java
+    SimulationsDaten.java      -- Record (Eingabe-Container)
+    Main.java                  -- Einstiegspunkt
+    io/
+      EingabeLeser.java
+      AusgabeManager.java
+  datei.txt                    -- Aktuelle Eingabedatei
+\end{lstlisting}
+
+\subsubsection{Benutzeranleitung}
+
+\begin{enumerate}
+  \item Eingabedatei \texttt{datei.txt} im Projektverzeichnis anlegen/bearbeiten
+        (Format: siehe Abschnitt 1.2).
+  \item Programm starten (siehe oben).
+  \item Die Ausgabe erscheint in der Konsole; sie enthält Fahrpläne und Kennwerte
+        für alle drei Strategien.
+\end{enumerate}
+
+\paragraph{Eingabeformat}
+\begin{lstlisting}
+Strecke:
+A B C ...
+
+Abstaende:
+<d1> <d2> ...
+
+Start Hinfahrt:
+<startminute>
+\end{lstlisting}
+
+% -----------------------------------------------------------------------
+\subsection{Zusammenfassung mit Ausblick}
+
+Das implementierte System berechnet getaktete Fahrpläne für eingleisige
+Eisenbahnstrecken und vergleicht drei Strategien anhand eines quadratischen
+Warte\-zeit-Scores.
+
+\medskip
+\noindent
+\textbf{Erreichte Ziele:}
+\begin{itemize}
+  \item Alle drei Strategien korrekt implementiert und getestet.
+  \item Kollisionserkennung mit Behandlung des Stundenwechsels.
+  \item Tabellarische Ausgabe gemäß Aufgabenstellung.
+  \item Score-Berechnung nach quadratischem Strafmaß.
+\end{itemize}
+
+\noindent
+\textbf{Ausblick und mögliche Erweiterungen:}
+\begin{itemize}
+  \item Unterstützung variabler Haltezeiten und Sicherheitswartezeiten
+        (bereits als Konstante vorbereitet, leicht anpassbar).
+  \item Grafische Ausgabe des Fahrplans (z.\,B. als Bildfahrplan).
+  \item Automatische Optimierung der Rückfahrt-Startzeit für
+        „Beidseitiges Warten" durch Brute-Force über alle 60\,möglichen
+        Startzeiten.
+  \item Einlesen mehrerer Strecken aus einer Datei.
+\end{itemize}
+
+% -----------------------------------------------------------------------
+\section{Diskussion der Testbeispiele}
+
+\subsection{Skript zur automatischen Ausführung der Beispiele}
+
+\begin{lstlisting}[language=bash]
+#!/bin/bash
+# run_tests.sh -- alle Testfaelle automatisch ausfuehren
+EXAMPLES_DIR="docs/testbeispiele"
+for f in "$EXAMPLES_DIR"/*.txt; do
+  echo "=== $f ==="
+  cp "$f" datei.txt
+  mvn -q exec:java -Dexec.mainClass="de.matse.ihk.Main"
+done
+\end{lstlisting}
+
+% -----------------------------------------------------------------------
+\subsection{Angegebene Beispiele}
+
+\subsubsection{Beispiel 1 -- 3 Bahnhöfe (einfach, keine Wartezeit)}
+
+\textbf{Eingabe:}
+\begin{lstlisting}
+Strecke:
+A B C
+Abstaende:
+5 7
+Start Hinfahrt:
+17
+\end{lstlisting}
+
+\textbf{Erwartetes Ergebnis:} Alle drei Strategien identisch, Score $= 0$.
+Keine Kollision, da die Strecke kurz genug ist.
+
+\subsubsection{Beispiel 2 -- 7 Bahnhöfe (ungerade, Wartezeit bei Einseitigem Warten)}
+
+\textbf{Eingabe:}
+\begin{lstlisting}
+Strecke:
+A B C D E F G
+Abstaende:
+5 8 6 7 3 2
+Start Hinfahrt:
+17
+\end{lstlisting}
+
+\textbf{Einfache Fahrt:} Kollision zwischen B und C (Markierung \texttt{x}).
+
+\textbf{Einseitiges Warten:}
+\begin{lstlisting}
+An    22 31 38 46 50 53
+Wa
+Ab 17 23 32 39 47 51 54
+    A  B  C  D  E  F  G
+Ab 31 41 32 09 01 57 54
+Wa       16
+An 46 40 15 08 00 56
+Gesamtdauer Hinfahrt, Rueckfahrt       : 36, 52
+Summe Wartezeiten Hinfahrt, Rueckfahrt : 0, 16
+Summe Strafen                          : 256
+\end{lstlisting}
+
+Der Rückfahrtzug muss in C \textbf{16 Minuten} warten (ungerade Anzahl von
+Bahnhöfen führt zu einer asymmetrischen Streckenaufteilung).
+
+\textbf{Beidseitiges Warten:} Score $= 0$ durch optimale Wahl der Rückfahrt-Startzeit.
+
+\subsubsection{Beispiel 3 -- 10 Bahnhöfe (gerade, mehrfache Begegnungen)}
+
+\textbf{Eingabe:}
+\begin{lstlisting}
+Strecke:
+A B C D E F G H I J
+Abstaende:
+12 8 14 3 5 21 13 6 8
+Start Hinfahrt:
+17
+\end{lstlisting}
+
+\textbf{Einseitiges Warten:} Gesamtwartezeit Rückfahrt $= 8\,\text{min}$,
+Score $= 64$.\\
+\textbf{Beidseitiges Warten:} Wartezeit je Richtung $= 4\,\text{min}$,
+Score $= 4^2 + 4^2 = 32$.
+
+% -----------------------------------------------------------------------
+\subsection{Weitere repräsentative Beispiele mit Begründung der Wahl}
+
+\subsubsection{Beispiel 4 -- 2 Bahnhöfe (minimale Strecke)}
+
+\textbf{Begründung:} Grenzfall mit nur einem Streckenabschnitt; überprüft, ob
+die Schleifenlogik korrekt abbricht und keine Division durch null auftritt.
+
+\begin{lstlisting}
+Strecke:
+A B
+Abstaende:
+15
+Start Hinfahrt:
+0
+\end{lstlisting}
+
+Erwartetes Ergebnis: Keine Wartezeit, Score $= 0$, da kein Zwischenbahnhof
+existiert, an dem Züge aufeinandertreffen könnten.
+
+\subsubsection{Beispiel 5 -- Große Fahrtzeit (Kollision erzwungen)}
+
+\textbf{Begründung:} Strecke mit sehr langen Teilabschnitten; testet, ob
+Wartezeiten korrekt über den Stundenwechsel (Modulo\,60) berechnet werden.
+
+\begin{lstlisting}
+Strecke:
+A B C
+Abstaende:
+29 29
+Start Hinfahrt:
+0
+\end{lstlisting}
+
+% -----------------------------------------------------------------------
+\subsection{Grenz- und Fehlerfälle}
+
+\begin{itemize}
+  \item \textbf{Nur 2 Bahnhöfe:} Keine Haltezeiten an Zwischenbahnhöfen;
+        Mindestdauer $=$ Abstand.
+  \item \textbf{Startzeit 0:} Erlaubt; Zeiten bleiben nicht-negativ durch
+        Modulo\,60-Rechnung.
+  \item \textbf{Abstand = 30\,min (halber Takt):} Hin- und Rückfahrtzug erreichen
+        den Mittelpunkt gleichzeitig -- maximale Wartezeit.
+  \item \textbf{Ungültige Eingabedatei:} \texttt{EingabeLeser} wirft
+        \texttt{IOException}; \texttt{Main} gibt eine Fehlermeldung aus
+        und beendet das Programm.
+  \item \textbf{Einzelner Bahnhof:} Kein sinnvoller Fahrplan möglich; wird
+        nicht explizit abgefangen (Vorbedingung: mindestens 2 Bahnhöfe).
+\end{itemize}
+
+\end{document}
