@@ -17,8 +17,9 @@
 \usepackage{enumitem}
 \usepackage{tcolorbox}
 \usepackage{float}
+\usepackage{mdframed}
 
-\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds, calc}
 
 \geometry{margin=2.5cm}
 
@@ -33,6 +34,8 @@
 \definecolor{javakw}{RGB}{0,0,200}
 \definecolor{javastr}{RGB}{0,128,0}
 \definecolor{javacomment}{RGB}{128,128,128}
+\definecolor{mermbg}{RGB}{240,248,255}
+\definecolor{mermframe}{RGB}{70,130,180}
 
 \lstset{
     language=Java,
@@ -49,6 +52,21 @@
     numbers=left,
     numberstyle=\tiny\color{gray},
     numbersep=8pt,
+}
+
+\lstdefinestyle{mermaid}{
+    language={},
+    backgroundcolor=\color{mermbg},
+    frame=single,
+    rulecolor=\color{mermframe},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    showstringspaces=false,
+    numbers=none,
+    morekeywords={classDiagram,sequenceDiagram,flowchart,class,participant,
+                  loop,end,alt,else,opt,Note,TD,LR,TB,
+                  direction,subgraph,style,linkStyle},
+    keywordstyle=\color{blue!70!black}\bfseries,
 }
 
 \pagestyle{fancy}
@@ -72,6 +90,14 @@
     colframe=orange!60!black,
     fonttitle=\bfseries,
     title=Hinweis,
+    #1
+}
+
+\newtcolorbox{designbox}[1][]{
+    colback=green!5,
+    colframe=green!50!black,
+    fonttitle=\bfseries,
+    title=Designentscheidung,
     #1
 }
 
@@ -165,36 +191,28 @@ Die Klasse \texttt{BahnhofPlan} verwaltet alle Bahnhöfe als \textbf{doppelt ver
     node distance=0mm,
     box/.style={draw, minimum width=2.2cm, minimum height=0.7cm, font=\small\ttfamily},
     ptr/.style={-Stealth, thick},
-    dblptr/.style={Stealth-Stealth, thick, blue!60!black}
 ]
-
-% Nodes
 \node[box, fill=blue!10] (A) {A};
 \node[box, fill=blue!10, right=1.5cm of A] (B) {B};
 \node[box, fill=blue!10, right=1.5cm of B] (C) {C};
 \node[box, fill=blue!10, right=1.5cm of C] (D) {\ldots};
 
-% head/tail labels
 \node[above=0.4cm of A, font=\small\bfseries] (headlbl) {head};
 \draw[ptr] (headlbl) -- (A);
 \node[above=0.4cm of C, font=\small\bfseries] (taillbl) {tail};
 \draw[ptr] (taillbl) -- (C);
 
-% next arrows (forward)
 \draw[ptr, red!70!black] (A.east) -- node[above, font=\tiny] {next} (B.west);
 \draw[ptr, red!70!black] (B.east) -- node[above, font=\tiny] {next} (C.west);
 \draw[ptr, red!70!black] (C.east) -- node[above, font=\tiny] {next} (D.west);
 
-% prev arrows (backward)
 \draw[ptr, green!50!black, bend right=30] (B.south) to node[below, font=\tiny] {prev} (A.south);
 \draw[ptr, green!50!black, bend right=30] (C.south) to node[below, font=\tiny] {prev} (B.south);
 \draw[ptr, green!50!black, bend right=30] (D.south) to node[below, font=\tiny] {prev} (C.south);
 
-% distance labels
 \node[below=0.9cm of A, xshift=0.75cm, font=\tiny, red!70!black] {dist=5};
 \node[below=0.9cm of B, xshift=0.75cm, font=\tiny, red!70!black] {dist=8};
 \node[below=0.9cm of C, xshift=0.75cm, font=\tiny, red!70!black] {dist=?};
-
 \end{tikzpicture}
 \caption{Doppelt verkettete Liste der Bahnhöfe (Beispiel: A--B--C--\ldots)}
 \end{figure}
@@ -250,6 +268,64 @@ for (FahrplanStrategie strategie : strategien) {
 \end{lstlisting}
 
 Der aufrufende Code benötigt keine \texttt{if-else}-Kette. Neue Strategien können einfach hinzugefügt werden, indem man \texttt{FahrplanStrategie} erweitert und das neue Objekt ins Array aufnimmt.
+
+\subsection{Geteilte Objektreferenz: Strategien bauen aufeinander auf}
+\label{sec:referenz}
+
+\begin{designbox}
+Alle drei Strategien erhalten \textbf{dieselbe} \texttt{BahnhofPlan}-Referenz. Es wird \textbf{keine Kopie} des Objekts angelegt. Die Strategien schreiben ihre Ergebnisse direkt in dieselben \texttt{BahnhofNode}-Objekte -- und lesen die Ergebnisse der vorherigen Strategie von dort.
+\end{designbox}
+
+Dies ist eine bewusste Designentscheidung mit folgenden Konsequenzen:
+
+\textbf{Strategie 1 -- EinfacheFahrtStrategie}:
+Berechnet sowohl die \emph{Hinfahrt} als auch die \emph{Rückfahrt} und schreibt alle Zeitwerte (\texttt{ankunfthin}, \texttt{abfahrthin}, \texttt{ankunftrueck}, \texttt{abfahrtrueck}) in die Knoten des gemeinsamen Plans.
+
+\textbf{Strategie 2 -- EinseitigesWartenStrategie}:
+Liest die bereits von Strategie~1 gesetzten Hinfahrtdaten (\texttt{ankunfthin}, \texttt{abfahrthin}) aus den Knoten, ohne sie neu zu berechnen:
+
+\begin{lstlisting}[caption={EinseitigesWartenStrategie baut auf Hinfahrtdaten von Strategie 1 auf}]
+public void berechneFahrplan(BahnhofPlan plan, int startZeit) {
+    this.aktuellerPlan = plan;
+    // Liest ankunfthin(tail) -- wurde von EinfacheFahrtStrategie gesetzt!
+    int startZeitRueck = (aktuellerPlan.getTail().getAnkunfthin() + 1) % 60;
+    rueckfahrtMitKollision(aktuellerPlan, startZeitRueck);
+}
+\end{lstlisting}
+
+Die Zeile \texttt{getTail().getAnkunfthin()} greift auf den Wert zu, den \texttt{EinfacheFahrtStrategie} zuvor in den letzten Knoten geschrieben hat. Die Hinfahrt wird \emph{nicht} neu berechnet.
+
+\textbf{Strategie 3 -- BeidseitigesWartenStrategie}:
+Funktioniert analog. Sie liest ebenfalls \texttt{ankunfthin} der Hinfahrt (gesetzt durch Strategie~1) und überschreibt im Laufe ihrer Berechnung die Rückfahrtdaten sowie ggf. auch die Hinwartezeiten.
+
+\textbf{Warum kein Reset / keine Kopie?}
+
+Die Hinfahrtdaten (gesetzt von Strategie~1) sind für alle drei Strategien identisch, weil Strategien 2 und 3 die Hinfahrt unverändert lassen -- sie verändern nur die Rückfahrtzeiten und Wartezeiten. Dadurch ist es korrekt, dieselbe Referenz weiterzugeben, ohne das Objekt vorher zurückzusetzen. Lediglich die Rückfahrtwerte und Wartezeiten werden bei jeder Strategie neu überschrieben.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    strat/.style={draw, rounded corners, fill=blue!10, minimum width=4.5cm, minimum height=1cm, font=\small},
+    plan/.style={draw, rounded corners, fill=yellow!20, minimum width=3cm, minimum height=0.8cm, font=\small\ttfamily},
+    arrow/.style={-Stealth, thick},
+    write/.style={-Stealth, thick, red!70!black},
+    read/.style={-Stealth, thick, green!50!black, dashed},
+]
+\node[plan] (plan) at (5,0) {BahnhofPlan};
+
+\node[strat] (s1) at (0, 2.5) {EinfacheFahrtStrategie};
+\node[strat] (s2) at (0, 0)   {EinseitigesWartenStrategie};
+\node[strat] (s3) at (0,-2.5) {BeidseitigesWartenStrategie};
+
+\draw[write] (s1.east) -- node[above, font=\tiny, red!70!black] {schreibt Hin+Rück} (plan.west |- s1);
+\draw[write] (s2.east) -- node[above, font=\tiny, red!70!black] {schreibt Rück+Wa} (plan.west);
+\draw[write] (s3.east) -- node[below, font=\tiny, red!70!black] {schreibt Rück+Wa} (plan.west |- s3);
+
+\draw[read, bend left=15] (plan.south west) to node[below right, font=\tiny, green!50!black] {liest ankunfthin} (s2.south east);
+\draw[read, bend right=20] (plan.south) to node[below, font=\tiny, green!50!black] {liest ankunfthin} (s3.east);
+\end{tikzpicture}
+\caption{Alle drei Strategien teilen sich dasselbe \texttt{BahnhofPlan}-Objekt. Strategien 2 und 3 lesen die Hinfahrtdaten, die Strategie 1 hinterlassen hat.}
+\end{figure}
 
 % ─────────────────────────────────────────
 \section{Einlesen und Initialisieren der Daten}
@@ -334,11 +410,11 @@ Die Methode \texttt{isKollision()} gehört zur Klasse \texttt{BahnhofNode} und p
 public boolean isKollision() {
     if (this.next == null) return false; // letzter Bahnhof: kein Abschnitt danach
 
-    int hStart = this.abfahrthin;       // Hinzug faehrt ab bei diesem Bahnhof
-    int hEnde  = this.next.getAnkunfthin(); // Hinzug kommt an beim naechsten
+    int hStart = this.abfahrthin;            // Hinzug faehrt ab
+    int hEnde  = this.next.getAnkunfthin();  // Hinzug kommt an
 
-    int rStart = this.next.getAbfahrtrueck(); // Rueckzug faehrt ab beim naechsten
-    int rEnde  = this.ankunftrueck;           // Rueckzug kommt an bei diesem Bahnhof
+    int rStart = this.next.getAbfahrtrueck(); // Rueckzug faehrt ab
+    int rEnde  = this.ankunftrueck;           // Rueckzug kommt an
 
     return checkOverlap(hStart, hEnde, rStart, rEnde);
 }
@@ -369,7 +445,7 @@ Die Methode \texttt{checkOverlap()} iteriert alle 60 möglichen Minutenwerte und
 \begin{beispielbox}[title={Beispiel2: Strecke A--B--C--D--E--F--G, Abstände: 5 8 6 7 3 2, Start: 17}]
 Hinfahrt (ohne Kollisionsbehandlung):
 \begin{center}
-\begin{tabular}{lcccccc}
+\begin{tabular}{lccccccc}
 \toprule
  & A & B & C & D & E & F & G \\
 \midrule
@@ -381,7 +457,7 @@ Abfahrt Hin & 17 & 23 & 32 & 39 & 47 & 51 & -- \\
 
 Rückfahrt (ohne Kollisionsbehandlung, Startzeit = 54):
 \begin{center}
-\begin{tabular}{lcccccc}
+\begin{tabular}{lccccccc}
 \toprule
  & A & B & C & D & E & F & G \\
 \midrule
@@ -457,6 +533,10 @@ Gesamtdauer Hin/Rück: 36 / 36 \quad Wartezeit: 0 / 0 \quad Strafe: 0
 Das \textbf{x} bei B zeigt die Kollision auf dem Abschnitt B$\to$C an.
 \end{beispielbox}
 
+\begin{hinweisbox}
+Die Hinfahrtdaten (\texttt{ankunfthin}, \texttt{abfahrthin}), die \texttt{EinfacheFahrtStrategie} hier in die Knoten schreibt, werden von den Strategien~2 und~3 \emph{unverändert weitergenutzt} (siehe Abschnitt~\ref{sec:referenz}). Die Strategien schreiben diese Werte \emph{nicht} neu.
+\end{hinweisbox}
+
 % ─────────────────────────────────────────
 \section{Strategie 2: Einseitiges Warten}
 
@@ -476,7 +556,7 @@ Die Methode \texttt{rueckfahrtMitKollision()} arbeitet in zwei Phasen:
     \texttt{wartezeitRueck}_i &= (\texttt{ankunfthin}_i - \texttt{ankunftrueck}_i + 60) \bmod 60
 \end{align*}
 
-Diese Formel berechnet, wie lange der Rückzug bei Knoten $i$ warten muss, damit er frühestens dann abfährt, wenn der Hinzug den Abschnitt verlassen hat (d.\,h. am Folgebahnhof angekommen ist). Die $+60$ und $\bmod 60$ behandeln den Fall, dass die Zeiten über den Stundenwechsel gehen.
+Diese Formel berechnet, wie lange der Rückzug bei Knoten $i$ warten muss, damit er frühestens dann abfährt, wenn der Hinzug den Abschnitt verlassen hat. Die $+60$ und $\bmod 60$ behandeln den Fall, dass die Zeiten über den Stundenwechsel gehen.
 
 Die Abfahrtszeit wird dann entsprechend nach hinten verschoben:
 \begin{align*}
@@ -558,7 +638,7 @@ for (int i = 0; i < 60; i++) {
 }
 \end{lstlisting}
 
-Wenn eine Startzeit dazu führt, dass der vorletzte Bahnhof (direkt neben dem Endbahnhof) noch eine Kollision hat, wird diese Startzeit übersprungen.
+Wenn eine Startzeit dazu führt, dass der vorletzte Bahnhof noch eine Kollision hat, wird diese Startzeit übersprungen.
 
 \textbf{Schritt 2 -- Hälftige Aufteilung} (\texttt{beidseitigesWarten()}):
 
@@ -570,8 +650,6 @@ Für jeden Bahnhof mit \texttt{wartezeitRueck > 0} wird die Wartezeit geteilt:
 
 (Bei ungeraden Wartezeiten bekommt die Rückfahrt eine Minute mehr.)
 
-Durch die Hinwartezeiten verschiebt sich auch die Abfahrt des Hinzuges nach hinten, was wiederum die Ankunft am Endbahnhof nach hinten schiebt und damit den optimalen Startzeitpunkt der Rückfahrt beeinflusst. Deshalb wird die Hinfahrt danach mit \texttt{hinfahrtMitKollision()} und die Rückfahrt mit der angepassten Startzeit neu berechnet.
-
 \textbf{Strafe}:
 \begin{align*}
     \text{Strafe} = \left(\sum_i \texttt{wartezeitHin}_i\right)^2 + \left(\sum_i \texttt{wartezeitRueck}_i\right)^2
@@ -582,16 +660,14 @@ Durch die Hinwartezeiten verschiebt sich auch die Abfahrt des Hinzuges nach hint
 \begin{beispielbox}[title={Beidseitiges Warten -- Beispiel2 (A--B--C--D--E--F--G, Start: 17)}]
 
 \textbf{Suche der besten Startzeit}:
-Durch Ausprobieren aller 60 Startzeitpunkte ergibt sich, dass bei Startzeit $= 10$ \emph{überhaupt keine Kollision} auf dem Abschnitt B$\to$C entsteht:
+Bei Startzeit $= 10$ entsteht keine Kollision auf dem Abschnitt B$\to$C:
 
 \begin{align*}
 \text{Hinzug B}\to\text{C:} &\quad [23, 31] \\
-\text{Rückzug C}\to\text{B bei Startzeit 10:} &\quad [\texttt{abfahrtrueck}(C), \texttt{ankunftrueck}(B)] = [41, 49]
+\text{Rückzug C}\to\text{B (Start 10):} &\quad [41, 49]
 \end{align*}
 
-Die Intervalle $[23, 31]$ und $[41, 49]$ schneiden sich \textbf{nicht} $\Rightarrow$ keine Kollision, Strafe $= 0$.
-
-Da \texttt{besteStartzeitRueck = 10 $\neq$ 0} wird \texttt{beidseitigesWarten()} aufgerufen. Da aber alle \texttt{wartezeitRueck = 0} sind, ändert sich nichts.
+$[23,31]$ und $[41,49]$ schneiden sich \textbf{nicht} $\Rightarrow$ keine Kollision, Strafe $= 0$.
 
 \textbf{Endergebnis}:
 \begin{center}
@@ -611,8 +687,6 @@ An Rück & 46 & 40 & 31 & 24 & 16 & 12 &    \\
 \end{center}
 
 Gesamtdauer Hin/Rück: 36 / 36 \quad Wartezeit: 0 / 0 \quad Strafe: $\mathbf{0}$
-
-Durch die geschickte Wahl der Startzeit der Rückfahrt wurde die Kollision vollständig vermieden, ohne dass ein Zug warten musste.
 \end{beispielbox}
 
 \subsection{Vergleich der drei Strategien an Beispiel2}
@@ -630,50 +704,479 @@ Beidseitiges Warten & 36 / 36 & 0 / 0 & 0 \\
 \end{center}
 
 \begin{hinweisbox}
-Die Einfache Fahrt zeigt im Ergebnis ebenfalls Strafe 0, weil sie Kollisionen gar nicht erst behebt und keine Wartezeiten einbaut -- sie ignoriert das Problem. Das ``Beidseitige Warten'' löst die Kollision jedoch korrekt auf, indem es die Rückfahrt so startet, dass sich die Züge nicht begegnen.
+Die Einfache Fahrt zeigt Strafe 0, weil sie Kollisionen gar nicht behebt und keine Wartezeiten einbaut -- sie ignoriert das Problem. Das Beidseitige Warten löst die Kollision korrekt auf, indem es die Rückfahrt so startet, dass sich die Züge nicht begegnen.
 \end{hinweisbox}
 
 % ─────────────────────────────────────────
-\section{Ausgabe}
+\section{Ausgabe (AusgabeManager)}
 
-\subsection{Format der Ausgabe (AusgabeManager)}
+\subsection{Überblick}
 
-Die Ausgabe erfolgt in einem horizontalen tabellarischen Format, bei dem die Bahnhöfe als Spalten dargestellt sind:
+Die Klasse \texttt{AusgabeManager} übernimmt die gesamte Formatierung und Speicherung der Ergebnisse. Sie enthält vier Methoden:
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Methode} & \textbf{Aufgabe} \\
+\midrule
+\texttt{druckeErgebnis(strategie, plan)} & Baut den Ausgabe-String auf und gibt ihn zurück \\
+\texttt{printRow(label, extraktor, plan, isStation)} & Erzeugt eine einzelne Zeile der Tabelle \\
+\texttt{berechneMindestdauer(plan)} & Berechnet die Fahrzeit ohne Wartezeiten \\
+\texttt{speicherErgebnis(dateiname, inhalt)} & Schreibt den Ausgabe-String in eine Datei \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{druckeErgebnis()}
+
+Diese Methode baut den gesamten Ausgabe-String für eine Strategie zusammen:
+
+\begin{lstlisting}[caption={AusgabeManager.druckeErgebnis()}]
+public static String druckeErgebnis(FahrplanStrategie strategie, BahnhofPlan plan) {
+    StringBuilder sb = new StringBuilder();
+    sb.append(strategie.getStrategieName()).append(":\n");
+
+    // Hinfahrt-Zeilen
+    sb.append(printRow("An ", n -> n.getAnkunfthin() != null
+        ? String.format("%02d", n.getAnkunfthin()) : "  ", plan, false));
+    sb.append(printRow("Wa ", n -> n.getWartezeitHin() > 0
+        ? String.format("%02d", n.getWartezeitHin()) : "  ", plan, false));
+    sb.append(printRow("Ab ", n -> n.getAbfahrthin() != null
+        ? String.format("%02d", n.getAbfahrthin()) : "  ", plan, false));
+
+    // Bahnhofnamen-Zeile (mit Kollisionsmarkierung)
+    sb.append(printRow("   ", n -> String.format("%2s", n.getName()), plan, true));
+
+    // Rueckfahrt-Zeilen
+    sb.append(printRow("Ab ", n -> n.getAbfahrtrueck() != null
+        ? String.format("%02d", n.getAbfahrtrueck()) : "  ", plan, false));
+    sb.append(printRow("Wa ", n -> n.getWartezeitRueck() > 0
+        ? String.format("%02d", n.getWartezeitRueck()) : "  ", plan, false));
+    sb.append(printRow("An ", n -> n.getAnkunftrueck() != null
+        ? String.format("%02d", n.getAnkunftrueck()) : "  ", plan, false));
+
+    // Statistik
+    int mindestdauer = berechneMindestdauer(plan);
+    int warteHin = 0, warteRueck = 0;
+    BahnhofNode current = plan.getHead();
+    while (current != null) {
+        warteHin  += current.getWartezeitHin();
+        warteRueck += current.getWartezeitRueck();
+        current = current.getNext();
+    }
+    sb.append(String.format("Gesamtdauer Hinfahrt, Rueckfahrt       : %d, %d%n",
+        mindestdauer + warteHin, mindestdauer + warteRueck));
+    sb.append(String.format("Summe Wartezeiten Hinfahrt, Rueckfahrt : %d, %d%n",
+        warteHin, warteRueck));
+    sb.append(String.format("Summe Strafen                         : %d%n",
+        strategie.getSummeStrafen()));
+    return sb.toString();
+}
+\end{lstlisting}
+
+Die Methode arbeitet rein auf Lesezugriff -- sie verändert keine Daten im \texttt{BahnhofPlan}.
+
+\subsection{printRow() -- Hilfsmethode für horizontale Zeilen}
+
+Das besondere Layout der Ausgabe (Bahnhöfe als Spalten, Zeiten als Zeilen) wird durch \texttt{printRow()} realisiert:
+
+\begin{lstlisting}[caption={AusgabeManager.printRow() mit Funktionsinterface}]
+private static String printRow(
+        String label,
+        Function<BahnhofNode, String> wertExtraktor,
+        BahnhofPlan plan,
+        boolean isStationRow) {
+    StringBuilder row = new StringBuilder();
+    row.append(String.format("%-3s", label));
+    BahnhofNode current = plan.getHead();
+    while (current != null) {
+        row.append(wertExtraktor.apply(current));
+        if (current.getNext() != null) {
+            // 'x' zwischen zwei Bahnhofnamen bei Kollision
+            row.append(isStationRow && current.isKollision() ? "x " : "  ");
+        }
+        current = current.getNext();
+    }
+    row.append("\n");
+    return row.toString();
+}
+\end{lstlisting}
+
+Der Schlüssel liegt im Parameter \texttt{wertExtraktor}: Er ist ein \texttt{Function<BahnhofNode, String>} -- also ein Java-Lambda, das für jeden Knoten den anzuzeigenden String bestimmt. Dadurch kann \texttt{printRow()} für \emph{alle} sieben Zeilen (An-Hin, Wa-Hin, Ab-Hin, Bahnhöfe, Ab-Rück, Wa-Rück, An-Rück) wiederverwendet werden, ohne die Schleife über die Liste zu duplizieren.
+
+Beispiel für den Aufruf der Ankunftszeile der Hinfahrt:
+\begin{lstlisting}
+printRow("An ", n -> n.getAnkunfthin() != null
+    ? String.format("%02d", n.getAnkunfthin()) : "  ", plan, false);
+\end{lstlisting}
+
+Das Lambda gibt \texttt{"  "} (zwei Leerzeichen) zurück, wenn \texttt{ankunfthin == null} ist (z.\,B. beim ersten Bahnhof, der keine Ankunftszeit hat), andernfalls die zweistellige Minutenangabe.
+
+\subsection{berechneMindestdauer()}
+
+\begin{lstlisting}[caption={Berechnung der Mindestfahrtdauer ohne Wartezeiten}]
+public static int berechneMindestdauer(BahnhofPlan plan) {
+    int dauer = 0;
+    int anzahlBahnhoefe = 0;
+    BahnhofNode current = plan.getHead();
+    while (current != null) {
+        anzahlBahnhoefe++;
+        if (current.getNext() != null)
+            dauer += current.getDistanceToNext();
+        current = current.getNext();
+    }
+    // 1 Min Haltezeit fuer jeden Zwischenbahnhof
+    if (anzahlBahnhoefe > 2)
+        dauer += (anzahlBahnhoefe - 2);
+    return dauer;
+}
+\end{lstlisting}
+
+Die Mindestdauer ist die Summe aller Streckenabstände plus je eine Minute Haltezeit pro Zwischenbahnhof (Start- und Endbahnhof zählen nicht). Sie wird von jeder Strategie als gemeinsame Basis genutzt; die tatsächliche Gesamtdauer ergibt sich als $\texttt{Mindestdauer} + \texttt{SummeWartezeiten}$.
+
+\subsection{speicherErgebnis()}
+
+\begin{lstlisting}[caption={Ergebnis in Datei schreiben}]
+public static void speicherErgebnis(String dateiname, String inhalt) {
+    File verzeichnis = new File("ausgabe");
+    if (!verzeichnis.exists()) verzeichnis.mkdir();
+    File zielDatei = new File(verzeichnis,
+        dateiname.replace(".txt", "") + "_ergebnis.txt");
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(zielDatei))) {
+        writer.write(inhalt);
+    } catch (IOException e) {
+        System.err.println("Fehler beim Speichern: " + e.getMessage());
+    }
+}
+\end{lstlisting}
+
+Das Verzeichnis \texttt{ausgabe/} wird beim ersten Aufruf automatisch angelegt, falls es noch nicht existiert. Der Dateiname ergibt sich aus dem Eingabedateinamen mit dem Suffix \texttt{\_ergebnis.txt}.
+
+\subsection{Format der Ausgabe}
+
+Die erzeugte Ausgabe für Beispiel2, Strategie ``Einseitiges Warten'', sieht folgendermaßen aus:
 
 \begin{verbatim}
-Einfache Fahrt:
+Einseitiges Warten:
 An     22  31  38  46  50  53
 Wa
 Ab 17  23  32  39  47  51
-    A   Bx  C   D   E   F   G
-Ab     25  16  09  01  57  54
-Wa
-An 30  24  15  08  00  56
+    A   B   C   D   E   F   G
+Ab     41  32  09  01  57  54
+Wa         16
+An 46  40  15  08  00  56
+Gesamtdauer Hinfahrt, Rueckfahrt       : 36, 52
+Summe Wartezeiten Hinfahrt, Rueckfahrt : 0, 16
+Summe Strafen                          : 256
 \end{verbatim}
 
 \begin{itemize}
-    \item \textbf{An / Wa / Ab (oben)}: Ankunft, Wartezeit, Abfahrt der Hinfahrt.
-    \item \textbf{Bahnhofzeile}: Bahnhofsnamen; ein \texttt{x} zwischen zwei Namen zeigt eine Kollision auf dem Abschnitt an.
-    \item \textbf{Ab / Wa / An (unten)}: Abfahrt, Wartezeit, Ankunft der Rückfahrt. (Achtung: Abfahrt steht oben, weil der Rückzug von rechts kommt und die Reihenfolge gespiegelt ist.)
-    \item \textbf{Zusammenfassung}: Gesamtdauer Hin/Rück, Summe Wartezeiten, Summe Strafen.
+    \item \textbf{Zeile 1}: Strategiename
+    \item \textbf{An / Wa / Ab (oben)}: Ankunft-, Wartezeit- und Abfahrtszeile der Hinfahrt
+    \item \textbf{Bahnhofzeile}: Namen mit \texttt{x} für Kollisionsabschnitte
+    \item \textbf{Ab / Wa / An (unten)}: Abfahrt-, Wartezeit- und Ankunftszeile der Rückfahrt
+    \item \textbf{Statistikzeilen}: Gesamtdauer, Wartezeiten und Strafe
 \end{itemize}
 
-\subsection{Speicherung}
+% ─────────────────────────────────────────
+\section{UML-Diagramme (Mermaid)}
 
-Die Ergebnisse aller Strategien einer Eingabedatei werden in eine Ausgabedatei im Verzeichnis \texttt{ausgabe/} geschrieben:
-\begin{center}
-\texttt{ausgabe/<dateiname>\_ergebnis.txt}
-\end{center}
+Die folgenden Abschnitte enthalten die Mermaid-Quellcodes der UML-Diagramme. Sie können unter \texttt{https://mermaid.live} oder in kompatiblen Markdown-Editoren gerendert werden.
+
+\subsection{Klassendiagramm}
+
+\begin{lstlisting}[style=mermaid, caption={Klassendiagramm -- vollständige Klassenstruktur}]
+classDiagram
+    class BahnhofNode {
+        -String name
+        -Integer ankunfthin
+        -Integer abfahrthin
+        -Integer wartezeitHin
+        -Integer ankunftrueck
+        -Integer abfahrtrueck
+        -Integer wartezeitRueck
+        -BahnhofNode next
+        -BahnhofNode prev
+        -int distanceToNext
+        +isKollision() boolean
+        -checkOverlap(s1,e1,s2,e2) boolean
+        -isTimeInInterval(t,start,ende) boolean
+    }
+
+    class BahnhofPlan {
+        -BahnhofNode head
+        -BahnhofNode tail
+        -int groesse
+        +addBahnhof(name) void
+        +setAbstaende(abstaende) void
+        +reset() void
+        +BahnhofPlan(original) -- Kopierkonstruktor
+    }
+
+    class SimulationsDaten {
+        <<record>>
+        +BahnhofPlan plan
+        +int startZeit
+    }
+
+    class FahrplanStrategie {
+        <<abstract>>
+        #BahnhofPlan aktuellerPlan
+        +getStrategieName()* String
+        +berechneFahrplan(plan, startZeit)* void
+        +getSummeStrafen()* int
+        +getSummeWarteZeit()* int
+        +hinfahrtOhneKollision(plan, startZeit)$ void
+        +rueckfahrtOhneKollision(plan, startZeit)$ void
+        +hinfahrtMitKollision(plan, startZeit)$ void
+        +rueckfahrtMitKollision(plan, startZeit)$ void
+        +beidseitigesWarten(plan, startZeit)$ void
+        +warteZeitHinReset(plan)$ void
+        +warteZeitRueckReset(plan)$ void
+    }
+
+    class EinfacheFahrtStrategie {
+        +berechneFahrplan(plan, startZeit) void
+        +getSummeStrafen() int
+        +getSummeWarteZeit() int
+    }
+
+    class EinseitigesWartenStrategie {
+        +berechneFahrplan(plan, startZeit) void
+        +getSummeStrafen() int
+        +getSummeWarteZeit() int
+    }
+
+    class BeidseitigesWartenStrategie {
+        -int besteStrafe
+        -int besteStartzeitRueck
+        +berechneFahrplan(plan, startZeit) void
+        +getSummeStrafen() int
+        +getSummeWarteZeit() int
+    }
+
+    class EingabeLeser {
+        +leseDatei(dateiPfad)$ SimulationsDaten
+    }
+
+    class AusgabeManager {
+        +druckeErgebnis(strategie, plan)$ String
+        +berechneMindestdauer(plan)$ int
+        +speicherErgebnis(dateiname, inhalt)$ void
+        -printRow(label, extraktor, plan, isStation)$ String
+    }
+
+    FahrplanStrategie <|-- EinfacheFahrtStrategie
+    FahrplanStrategie <|-- EinseitigesWartenStrategie
+    FahrplanStrategie <|-- BeidseitigesWartenStrategie
+    BahnhofPlan "1" *-- "1..*" BahnhofNode : enthaelt
+    BahnhofNode --> BahnhofNode : next / prev
+    SimulationsDaten --> BahnhofPlan
+    EingabeLeser ..> SimulationsDaten : erstellt
+    AusgabeManager ..> BahnhofPlan : liest
+    AusgabeManager ..> FahrplanStrategie : liest
+\end{lstlisting}
+
+\subsection{Sequenzdiagramm: Hauptprogrammablauf}
+
+\begin{lstlisting}[style=mermaid, caption={Sequenzdiagramm -- Ablauf in Main.java}]
+sequenceDiagram
+    participant Main
+    participant EingabeLeser
+    participant BahnhofPlan
+    participant S1 as EinfacheFahrtStrategie
+    participant S2 as EinseitigesWartenStrategie
+    participant S3 as BeidseitigesWartenStrategie
+    participant AusgabeManager
+
+    Main->>EingabeLeser: leseDatei(pfad)
+    EingabeLeser->>BahnhofPlan: addBahnhof() x n
+    EingabeLeser->>BahnhofPlan: setAbstaende()
+    EingabeLeser-->>Main: SimulationsDaten(plan, startZeit)
+
+    Note over Main: Gleicher BahnhofPlan fuer alle Strategien!
+
+    Main->>S1: berechneFahrplan(plan, startZeit)
+    S1->>BahnhofPlan: schreibt ankunfthin, abfahrthin (Hinfahrt)
+    S1->>BahnhofPlan: schreibt ankunftrueck, abfahrtrueck (Rueckfahrt)
+    Main->>AusgabeManager: druckeErgebnis(S1, plan)
+    AusgabeManager-->>Main: String
+
+    Main->>S2: berechneFahrplan(plan, startZeit)
+    Note over S2: Liest ankunfthin(tail) von S1!
+    S2->>BahnhofPlan: ueberschreibt Rueckfahrtdaten + wartezeitRueck
+    Main->>AusgabeManager: druckeErgebnis(S2, plan)
+    AusgabeManager-->>Main: String
+
+    Main->>S3: berechneFahrplan(plan, startZeit)
+    Note over S3: Liest ankunfthin(tail) von S1!
+    loop alle 60 Startzeiten
+        S3->>BahnhofPlan: rueckfahrtMitKollision(plan, i)
+        S3->>S3: Strafe berechnen und vergleichen
+    end
+    S3->>BahnhofPlan: beste Ruckfahrt + beidseitigesWarten
+    Main->>AusgabeManager: druckeErgebnis(S3, plan)
+    AusgabeManager-->>Main: String
+
+    Main->>AusgabeManager: speicherErgebnis(dateiname, gesamtausgabe)
+\end{lstlisting}
+
+\subsection{Ablaufdiagramm: rueckfahrtMitKollision()}
+
+\begin{lstlisting}[style=mermaid, caption={Flussdiagramm -- Algorithmus rueckfahrtMitKollision()}]
+flowchart TD
+    A([Start: rueckfahrtMitKollision\nplan, startZeit]) --> B
+
+    B[Phase 1: rueckfahrtOhneKollision\nBerechnet Ausgangsbasis ohne Kollision] --> C
+
+    C[current = tail.prev\nStarte Rueckwaertstraversierung] --> D
+
+    D{current.prev\n!= null?} -- Nein --> Z
+
+    D -- Ja --> E
+
+    E["current.ankunftrueck =
+    (current.next.abfahrtrueck
+    + current.distanceToNext) % 60"]
+
+    E --> F["current.abfahrtrueck =
+    (current.ankunftrueck + 1) % 60"]
+
+    F --> G["current.prev.ankunftrueck =
+    (current.abfahrtrueck
+    + current.prev.distanceToNext) % 60"]
+
+    G --> H{current.prev\n.isKollision?}
+
+    H -- Nein --> J[wartezeitRueck bleibt 0]
+
+    H -- Ja --> I["wartezeitRueck =
+    (ankunfthin - ankunftrueck + 60) % 60"]
+
+    I --> K
+
+    J --> K["abfahrtrueck =
+    (ankunftrueck + wartezeitRueck + 1) % 60"]
+
+    K --> L[current = current.prev]
+    L --> D
+
+    Z["A.ankunftrueck =
+    (B.abfahrtrueck + A.distanceToNext) % 60"]
+    Z --> END([Ende])
+\end{lstlisting}
+
+\subsection{Ablaufdiagramm: BeidseitigesWartenStrategie}
+
+\begin{lstlisting}[style=mermaid, caption={Flussdiagramm -- Algorithmus BeidseitigesWartenStrategie.berechneFahrplan()}]
+flowchart TD
+    A([Start: berechneFahrplan\nplan, startZeitHin]) --> B
+
+    B["besteStrafe = MAX_INT\nbesteStartzeitRueck = -1\ni = 0"] --> C
+
+    C{i < 60?} -- Nein --> H
+
+    C -- Ja --> D["rueckfahrtMitKollision(plan, i)"]
+
+    D --> E{tail.prev\nhat Kollision?}
+
+    E -- Ja: ungueltig --> F[i++]
+    F --> C
+
+    E -- Nein --> G["strafe = getSummeStrafen()"]
+
+    G --> G2{strafe <\nbesteStrafe?}
+
+    G2 -- Nein --> F
+
+    G2 -- Ja --> G3["besteStrafe = strafe\nbesteStartzeitRueck = i"]
+    G3 --> F
+
+    H["rueckfahrtMitKollision\n(plan, besteStartzeitRueck)"] --> I
+
+    I{besteStartzeitRueck\n!= 0?} -- Nein --> END
+
+    I -- Ja --> J["beidseitigesWarten(plan, startZeitHin)"]
+
+    J --> END([Ende])
+\end{lstlisting}
+
+\subsection{Ablaufdiagramm: Kollisionserkennung (isKollision)}
+
+\begin{lstlisting}[style=mermaid, caption={Flussdiagramm -- BahnhofNode.isKollision()}]
+flowchart TD
+    A([Start: isKollision\nan Knoten B]) --> B
+
+    B{next == null?} -- Ja --> NEIN([return false])
+
+    B -- Nein --> C
+
+    C["hStart = this.abfahrthin\nhEnde  = next.ankunfthin\nrStart = next.abfahrtrueck\nrEnde  = this.ankunftrueck"]
+
+    C --> D["checkOverlap(hStart, hEnde, rStart, rEnde)"]
+
+    D --> E[m = 0]
+
+    E --> F{m < 60?} -- Nein --> NEIN2([return false])
+
+    F -- Ja --> G{isTimeInInterval\nm in Hin-Intervall?}
+
+    G -- Nein --> L[m++]
+
+    G -- Ja --> H{isTimeInInterval\nm in Rueck-Intervall?}
+
+    H -- Nein --> L
+
+    H -- Ja --> JA([return true\nKOLLISION!])
+
+    L --> F
+\end{lstlisting}
+
+\subsection{Ablaufdiagramm: EingabeLeser}
+
+\begin{lstlisting}[style=mermaid, caption={Flussdiagramm -- EingabeLeser.leseDatei()}]
+flowchart TD
+    A([Start: leseDatei\ndateiPfad]) --> B
+
+    B["zeilen = Files.readAllLines(pfad)\nbahnhofPlan = new BahnhofPlan()\nstartZeit = 0\ni = 0"]
+
+    B --> C{i < zeilen\n.size?} -- Nein --> Z
+
+    C -- Ja --> D["aktuelleZeile = zeilen.get(i).trim()"]
+
+    D --> E{Strecke:?}
+
+    E -- Ja --> F["zeilen[i+1] splitten\nfuer jeden Namen:\nbahnhofPlan.addBahnhof(name)"]
+    F --> L[i++]
+
+    E -- Nein --> G{Abstaende:?}
+
+    G -- Ja --> H["zeilen[i+1] splitten\nals int[] parsen\nbahnhofPlan.setAbstaende()"]
+    H --> L
+
+    G -- Nein --> I{"Start\nHinfahrt:?"}
+
+    I -- Ja --> J["startZeit =\nInteger.parseInt(zeilen[i+1])"]
+    J --> L
+
+    I -- Nein --> L
+    L --> C
+
+    Z["return new SimulationsDaten\n(bahnhofPlan, startZeit)"]
+    Z --> END([Ende])
+\end{lstlisting}
 
 % ─────────────────────────────────────────
 \section{Zusammenfassung}
 
 Das Programm setzt das \textbf{Strategy Pattern} ein, um drei verschiedene Fahrplanberechnungsalgorithmen hinter einer einheitlichen Schnittstelle (\texttt{FahrplanStrategie}) zu kapseln. Die Kernalgorithmen werden als gemeinsame statische Methoden in der Basisklasse implementiert und von den konkreten Strategien wiederverwendet.
 
-Die Bahnhöfe werden als \textbf{doppelt verkettete Liste} modelliert. Dieses Datenstruktur ermöglicht eine natürliche Traversierung in beide Richtungen (Hin- und Rückfahrt) und eine lokale Kollisionsprüfung, die nur den aktuellen Knoten und seinen direkten Nachbarn benötigt.
+Die Bahnhöfe werden als \textbf{doppelt verkettete Liste} modelliert. Diese Datenstruktur ermöglicht eine natürliche Traversierung in beide Richtungen (Hin- und Rückfahrt) und eine lokale Kollisionsprüfung, die nur den aktuellen Knoten und seinen direkten Nachbarn benötigt.
+
+Ein wichtiges Entwurfsmerkmal ist die \textbf{gemeinsame Objektreferenz}: Alle drei Strategien operieren auf demselben \texttt{BahnhofPlan}-Objekt. Die \texttt{EinfacheFahrtStrategie} schreibt die Hinfahrtdaten in die Knoten, und die nachfolgenden Strategien lesen diese Daten direkt, ohne die Hinfahrt neu zu berechnen. Dies funktioniert korrekt, weil Strategien 2 und 3 die Hinfahrtdaten unverändert lassen.
 
 Die \textbf{Kollisionserkennung} basiert auf einer Intervall-Überschneidungsprüfung auf einer Modulo-60-Uhr, die auch den Übergang von Minute 59 auf Minute 0 korrekt behandelt.
 
-Die \textbf{Wartezeitstrategie} wird von keiner Wartezeit (Einfache Fahrt) über einseitiges Warten (nur Rückzug) bis hin zur hälftigen Aufteilung (Beidseitiges Warten) skaliert, wobei die quadratische Strafformel dafür sorgt, dass eine gleichmäßige Verteilung immer mindestens so gut ist wie eine einseitige.
+Die \textbf{Ausgabe} nutzt ein Funktionsinterface (\texttt{Function<BahnhofNode, String>}), um mit einer einzigen \texttt{printRow()}-Hilfsmethode alle sieben Zeilen der tabellarischen Darstellung zu erzeugen, ohne Code zu duplizieren.
 
 \end{document}
