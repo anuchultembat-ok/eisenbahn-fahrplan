@@ -2324,6 +2324,699 @@ F2 & \texttt{07b\_abstand30\_kollision}      & Fehler    & Abstand = 30, BUG-01 
 \end{center}
 
 % ─────────────────────────────────────────
+\section{Objektorientierte Programmkonzeption}
+\label{sec:oop}
+
+\subsection{Schichtenarchitektur und Pakete}
+
+Das Programm ist in drei Schichten aufgeteilt, die über Java-Pakete getrennt sind:
+
+\begin{center}
+\begin{tikzpicture}[
+  layer/.style={draw, rounded corners, minimum width=11cm, minimum height=1.1cm,
+                font=\bfseries\small, align=center},
+  pkg/.style={draw, rounded corners, minimum width=3.2cm, minimum height=0.8cm,
+              font=\ttfamily\small, align=center, fill=white},
+  arr/.style={->, thick, gray}
+]
+% Schichten
+\node[layer, fill=blue!10]  (io)    at (0,0)    {I/O-Schicht \quad \texttt{de.matse.ihk.io}};
+\node[layer, fill=green!10] (logic) at (0,-1.6) {Logik-Schicht \quad \texttt{de.matse.ihk.strategie}};
+\node[layer, fill=orange!10](model) at (0,-3.2) {Datenmodell \quad \texttt{de.matse.ihk.model}};
+
+% Klassen in I/O
+\node[pkg, fill=blue!20]   at (-2.8, 0)  {\texttt{EingabeLeser}};
+\node[pkg, fill=blue!20]   at ( 0.8, 0)  {\texttt{AusgabeManager}};
+\node[pkg, fill=blue!20]   at ( 3.8, 0)  {\texttt{Main}};
+
+% Klassen in Logik
+\node[pkg, fill=green!20]  at (-3.5,-1.6) {\texttt{FahrplanStrategie}};
+\node[pkg, fill=green!20]  at (-0.5,-1.6) {\texttt{EinfacheFahrt...}};
+\node[pkg, fill=green!20]  at ( 2.5,-1.6) {\texttt{Einseitiges...}};
+\node[pkg, fill=green!20, minimum width=2.2cm]  at ( 4.9,-1.6) {\texttt{Beidseitiges...}};
+
+% Klassen in Modell
+\node[pkg, fill=orange!20] at (-3.2,-3.2) {\texttt{BahnhofNode}};
+\node[pkg, fill=orange!20] at (-0.2,-3.2) {\texttt{BahnhofPlan}};
+\node[pkg, fill=orange!20] at ( 3.0,-3.2) {\texttt{SimulationsDaten}};
+
+% Pfeile
+\draw[arr] (io)    -- (logic);
+\draw[arr] (logic) -- (model);
+\end{tikzpicture}
+\end{center}
+
+\begin{itemize}
+  \item \textbf{Datenmodell} (\texttt{model}): Reine Datenklassen ohne Algorithmuslogik.
+        \texttt{BahnhofNode} und \texttt{BahnhofPlan} verwalten die Listenstruktur;
+        \texttt{SimulationsDaten} ist ein unveränderlicher Record-Container.
+  \item \textbf{Logik-Schicht} (\texttt{strategie}): Enthält alle Berechnungsalgorithmen.
+        \texttt{FahrplanStrategie} definiert die gemeinsame Schnittstelle und stellt
+        gemeinsame statische Hilfsmethoden bereit.
+  \item \textbf{I/O-Schicht} (\texttt{io}): Verantwortlich für Lesen und Schreiben.
+        \texttt{EingabeLeser} liest Textdateien; \texttt{AusgabeManager} formatiert
+        und speichert Ergebnisse.
+\end{itemize}
+
+\subsection{Klasse: \texttt{BahnhofNode}}
+
+\textbf{Paket:} \texttt{de.matse.ihk.model} \quad
+\textbf{Typ:} Klasse \quad
+\textbf{Zweck:} Knoten der doppelt verketteten Liste; speichert alle Zeitdaten
+eines Bahnhofs sowie Listenverknüpfungen.
+
+\begin{center}
+\small
+\begin{tabular}{lllp{5.5cm}}
+\toprule
+\textbf{Sichtbarkeit} & \textbf{Typ} & \textbf{Feld} & \textbf{Bedeutung} \\
+\midrule
+\texttt{private} & \texttt{String}      & \texttt{name}           & Bezeichner des Bahnhofs \\
+\texttt{private} & \texttt{Integer}     & \texttt{ankunfthin}     & Ankunftminute Hinfahrt \\
+\texttt{private} & \texttt{Integer}     & \texttt{abfahrthin}     & Abfahrtminute Hinfahrt \\
+\texttt{private} & \texttt{Integer}     & \texttt{wartezeitHin}   & Wartezeit Hinfahrt (Standard: 0) \\
+\texttt{private} & \texttt{Integer}     & \texttt{ankunftrueck}   & Ankunftminute Rückfahrt \\
+\texttt{private} & \texttt{Integer}     & \texttt{abfahrtrueck}   & Abfahrtminute Rückfahrt \\
+\texttt{private} & \texttt{Integer}     & \texttt{wartezeitRueck} & Wartezeit Rückfahrt (Standard: 0) \\
+\texttt{private} & \texttt{BahnhofNode} & \texttt{next}           & Nachfolger in der Liste \\
+\texttt{private} & \texttt{BahnhofNode} & \texttt{prev}           & Vorgänger in der Liste \\
+\texttt{private} & \texttt{int}         & \texttt{distanceToNext} & Fahrtminuten zum nächsten Bahnhof \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{center}
+\small
+\begin{tabular}{lllp{5cm}}
+\toprule
+\textbf{Sichtbarkeit} & \textbf{Rückgabe} & \textbf{Methode} & \textbf{Beschreibung} \\
+\midrule
+\texttt{public}  & \texttt{boolean} & \texttt{isKollision()} & Prüft Intervallüberlapp auf Segment \\
+\texttt{private} & \texttt{boolean} & \texttt{checkOverlap(s1,e1,s2,e2)} & 60 Minuten minutengenau prüfen \\
+\texttt{private} & \texttt{boolean} & \texttt{isTimeInInterval(t,start,ende)} & Wrap-around-fähige Zeitprüfung \\
+\texttt{public}  & \texttt{BahnhofNode(String)} & Konstruktor & Erstellt Knoten mit Name \\
+\texttt{public}  & Getter/Setter & je Feld & Standard-Zugriffsmethoden \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Klasse: \texttt{BahnhofPlan}}
+
+\textbf{Paket:} \texttt{de.matse.ihk.model} \quad
+\textbf{Typ:} Klasse \quad
+\textbf{Zweck:} Container-Klasse für die doppelt verkettete Liste; verwaltet
+Einstiegspunkte und bietet Verwaltungsmethoden.
+
+\begin{center}
+\small
+\begin{tabular}{lllp{5.5cm}}
+\toprule
+\textbf{Sichtbarkeit} & \textbf{Typ} & \textbf{Feld / Methode} & \textbf{Beschreibung} \\
+\midrule
+\texttt{private} & \texttt{BahnhofNode} & \texttt{head} & Erster Knoten (Startbahnhof) \\
+\texttt{private} & \texttt{BahnhofNode} & \texttt{tail} & Letzter Knoten (Endbahnhof) \\
+\texttt{private} & \texttt{int}         & \texttt{groesse} & Anzahl Knoten \\
+\midrule
+\texttt{public}  & \texttt{void}        & \texttt{addBahnhof(String name)} & Fügt Knoten am Ende der Liste an \\
+\texttt{public}  & \texttt{void}        & \texttt{setAbstaende(int[])} & Weist Abstände den Segmenten zu \\
+\texttt{public}  & \texttt{void}        & \texttt{reset()} & Setzt alle Zeitfelder auf null/0 \\
+\texttt{public}  &                      & \texttt{BahnhofPlan(BahnhofPlan)} & Kopierkonstruktor (tiefe Kopie) \\
+\texttt{public}  & Getter               & \texttt{getHead(), getTail(), getGroesse()} & Zugriff auf Listenstruktur \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Record: \texttt{SimulationsDaten}}
+
+\textbf{Paket:} \texttt{de.matse.ihk.model} \quad
+\textbf{Typ:} Java Record (unveränderlich) \quad
+\textbf{Zweck:} Transportobjekt zwischen \texttt{EingabeLeser} und \texttt{Main}.
+
+\begin{lstlisting}[language=Java]
+public record SimulationsDaten(BahnhofPlan plan, int startZeit) {}
+\end{lstlisting}
+
+Ein Java-Record generiert automatisch Konstruktor, Getter (\texttt{plan()},
+\texttt{startZeit()}), \texttt{equals()}, \texttt{hashCode()} und \texttt{toString()}.
+
+\subsection{Abstrakte Klasse: \texttt{FahrplanStrategie}}
+
+\textbf{Paket:} \texttt{de.matse.ihk.strategie} \quad
+\textbf{Typ:} Abstrakte Klasse \quad
+\textbf{Zweck:} Gemeinsame Basisklasse und statische Algorithmus-Bibliothek
+für alle drei Strategien (Strategy Pattern).
+
+\begin{center}
+\small
+\begin{tabular}{lllp{5.5cm}}
+\toprule
+\textbf{Modifikator} & \textbf{Rückgabe} & \textbf{Methode} & \textbf{Beschreibung} \\
+\midrule
+\texttt{protected} & \texttt{BahnhofPlan} & \texttt{aktuellerPlan} & Gespeicherter Plan (Instanzfeld) \\
+\midrule
+\texttt{public abstract} & \texttt{String} & \texttt{getStrategieName()} & Name der Strategie \\
+\texttt{public abstract} & \texttt{void} & \texttt{berechneFahrplan(plan, start)} & Fahrplanberechnung \\
+\texttt{public abstract} & \texttt{int} & \texttt{getSummeStrafen()} & Berechnet Strafpunkte \\
+\texttt{public abstract} & \texttt{int} & \texttt{getSummeWarteZeit()} & Summe aller Wartezeiten \\
+\midrule
+\texttt{public static} & \texttt{void} & \texttt{hinfahrtOhneKollision(plan, start)} & Vorwärts-Traversierung \\
+\texttt{public static} & \texttt{void} & \texttt{rueckfahrtOhneKollision(plan, start)} & Rückwärts-Traversierung \\
+\texttt{public static} & \texttt{void} & \texttt{hinfahrtMitKollision(plan, start)} & Vorwärts mit Wartezeit \\
+\texttt{public static} & \texttt{void} & \texttt{rueckfahrtMitKollision(plan, start)} & Rückwärts mit Kollisionskorrektur \\
+\texttt{public static} & \texttt{void} & \texttt{beidseitigesWarten(plan, startHin)} & Wartezeit gleichmäßig aufteilen \\
+\texttt{public static} & \texttt{void} & \texttt{warteZeitHinReset(plan)} & Alle \texttt{wartezeitHin} auf 0 \\
+\texttt{public static} & \texttt{void} & \texttt{warteZeitRueckReset(plan)} & Alle \texttt{wartezeitRueck} auf 0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Konkrete Strategieklassen}
+
+\begin{center}
+\small
+\begin{tabular}{p{4cm}p{4.5cm}p{5.5cm}}
+\toprule
+\textbf{Klasse} & \textbf{berechneFahrplan()} & \textbf{getSummeStrafen()} \\
+\midrule
+\texttt{EinfacheFahrtStrategie}
+  & \texttt{hinfahrtOhneKollision} + \texttt{rueckfahrtOhneKollision}
+  & Gibt immer 0 zurück \\
+\addlinespace
+\texttt{EinseitigesWartenStrategie}
+  & Liest \texttt{ankunftHin} vom Tail (von Strategie 1 geschrieben), ruft \texttt{rueckfahrtMitKollision}
+  & $(\sum \mathtt{wartezeitRueck})^2$ \\
+\addlinespace
+\texttt{BeidseitigesWartenStrategie}
+  & Schleife über 60 Startzeiten, wählt beste; ruft anschließend \texttt{beidseitigesWarten}
+  & $(\sum \mathtt{wartezeitHin})^2 + (\sum \mathtt{wartezeitRueck})^2$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Klasse: \texttt{EingabeLeser}}
+
+\textbf{Paket:} \texttt{de.matse.ihk.io} \quad
+\textbf{Typ:} Utility-Klasse (nur statische Methoden) \quad
+\textbf{Zweck:} Liest eine Eingabedatei und baut daraus ein \texttt{SimulationsDaten}-Objekt.
+
+\begin{center}
+\small
+\begin{tabular}{lllp{5.5cm}}
+\toprule
+\textbf{Modifikator} & \textbf{Rückgabe} & \textbf{Methode} & \textbf{Beschreibung} \\
+\midrule
+\texttt{public static} & \texttt{SimulationsDaten} & \texttt{leseDatei(String dateiPfad)} & Parst Eingabedatei, gibt Daten zurück; wirft \texttt{IOException} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Klasse: \texttt{AusgabeManager}}
+
+\textbf{Paket:} \texttt{de.matse.ihk.io} \quad
+\textbf{Typ:} Utility-Klasse (nur statische Methoden) \quad
+\textbf{Zweck:} Formatiert Ergebnisse als horizontale Tabelle und speichert sie.
+
+\begin{center}
+\small
+\begin{tabular}{lllp{5.5cm}}
+\toprule
+\textbf{Modifikator} & \textbf{Rückgabe} & \textbf{Methode} & \textbf{Beschreibung} \\
+\midrule
+\texttt{public static}  & \texttt{String} & \texttt{druckeErgebnis(strategie, plan)} & Baut komplette 7-Zeilen-Tabelle auf \\
+\texttt{private static} & \texttt{String} & \texttt{printRow(label, extraktor, plan, isStation)} & Erzeugt eine Zeile der Tabelle \\
+\texttt{public static}  & \texttt{int}    & \texttt{berechneMindestdauer(plan)} & Summe Abstände + Haltezeiten \\
+\texttt{public static}  & \texttt{void}   & \texttt{speicherErgebnis(dateiname, inhalt)} & Schreibt Ergebnis in \texttt{ausgabe/} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ─────────────────────────────────────────
+\section{UML-Sequenzdiagramme für wesentliche Abläufe}
+\label{sec:sequenz}
+
+Die folgenden Sequenzdiagramme zeigen die wichtigsten Interaktionen zwischen den
+Klassen als Mermaid-Code. Sie ergänzen die Ablaufdiagramme aus Kapitel~\ref{sec:uml}.
+
+\subsection{Sequenz 1: Gesamtablauf \texttt{Main} (pro Eingabedatei)}
+
+\begin{lstlisting}[language=, caption={Sequenzdiagramm: Gesamtablauf für eine Eingabedatei}]
+sequenceDiagram
+    actor User
+    participant Main
+    participant EingabeLeser
+    participant BahnhofPlan
+    participant EinfacheFahrt as EinfacheFahrtStrategie
+    participant Einseitiges as EinseitigesWartenStrategie
+    participant Beidseitiges as BeidseitigesWartenStrategie
+    participant AusgabeManager
+
+    User->>Main: java -jar ... testfaelle/
+    Main->>EingabeLeser: leseDatei(dateipfad)
+    EingabeLeser->>BahnhofPlan: new BahnhofPlan()
+    EingabeLeser->>BahnhofPlan: addBahnhof(name) [n-mal]
+    EingabeLeser->>BahnhofPlan: setAbstaende(int[])
+    EingabeLeser-->>Main: SimulationsDaten(plan, startZeit)
+
+    Note over Main: Schleife über alle 3 Strategien
+
+    Main->>EinfacheFahrt: berechneFahrplan(plan, startZeit)
+    EinfacheFahrt->>BahnhofPlan: hinfahrtOhneKollision() + rueckfahrtOhneKollision()
+    EinfacheFahrt-->>Main: fertig
+    Main->>AusgabeManager: druckeErgebnis(strategie, plan)
+    AusgabeManager-->>Main: String (Ergebnis Strategie 1)
+
+    Main->>BahnhofPlan: reset()
+    Main->>Einseitiges: berechneFahrplan(plan, startZeit)
+    Note right of Einseitiges: Liest ankunftHin (von Strategie 1)
+    Einseitiges->>BahnhofPlan: rueckfahrtMitKollision(plan, startRueck)
+    Einseitiges-->>Main: fertig
+    Main->>AusgabeManager: druckeErgebnis(strategie, plan)
+    AusgabeManager-->>Main: String (Ergebnis Strategie 2)
+
+    Main->>BahnhofPlan: reset()
+    Main->>Beidseitiges: berechneFahrplan(plan, startZeit)
+    Beidseitiges-->>Main: fertig
+    Main->>AusgabeManager: druckeErgebnis(strategie, plan)
+    AusgabeManager-->>Main: String (Ergebnis Strategie 3)
+
+    Main->>AusgabeManager: speicherErgebnis(dateiname, gesamtausgabe)
+\end{lstlisting}
+
+\subsection{Sequenz 2: \texttt{EinseitigesWartenStrategie.berechneFahrplan()}}
+
+\begin{lstlisting}[language=, caption={Sequenzdiagramm: Einseitiges Warten}]
+sequenceDiagram
+    participant Main
+    participant Einseitiges as EinseitigesWartenStrategie
+    participant FahrplanStrategie
+    participant BahnhofPlan
+    participant BahnhofNode
+
+    Main->>Einseitiges: berechneFahrplan(plan, startZeit)
+    Einseitiges->>BahnhofPlan: getTail().getAnkunfthin()
+    Note right of Einseitiges: startZeitRueck = (ankunftHin + 1) % 60
+    Einseitiges->>FahrplanStrategie: rueckfahrtMitKollision(plan, startZeitRueck)
+
+    FahrplanStrategie->>FahrplanStrategie: rueckfahrtOhneKollision(plan, startZeit)
+    Note right of FahrplanStrategie: Phase 1: Baseline-Rückfahrt ohne Wartezeit
+
+    loop Rückwärts: tail.prev bis head
+        FahrplanStrategie->>BahnhofNode: current.getPrev().isKollision()
+        alt Kollision vorhanden
+            FahrplanStrategie->>BahnhofNode: setWartezeitRueck((ankunftHin - ankunftRueck + 60) % 60)
+        end
+        FahrplanStrategie->>BahnhofNode: setAbfahrtrueck(ankunft + wartezeit + 1)
+    end
+    FahrplanStrategie-->>Einseitiges: fertig
+
+    Main->>Einseitiges: getSummeStrafen()
+    loop head bis tail-1
+        Einseitiges->>BahnhofNode: getWartezeitRueck()
+    end
+    Note right of Einseitiges: Strafe = (Summe wartezeitRueck)^2
+    Einseitiges-->>Main: int strafe
+\end{lstlisting}
+
+\subsection{Sequenz 3: \texttt{BeidseitigesWartenStrategie.berechneFahrplan()} -- Optimierungsschleife}
+
+\begin{lstlisting}[language=, caption={Sequenzdiagramm: Beidseitiges Warten Optimierungsschleife}]
+sequenceDiagram
+    participant Main
+    participant Beidseitiges as BeidseitigesWartenStrategie
+    participant FahrplanStrategie
+    participant BahnhofPlan
+
+    Main->>Beidseitiges: berechneFahrplan(plan, startZeitHin)
+    Note over Beidseitiges: besteStrafe = MAX_INT, besteStartzeit = -1
+
+    loop i = 0 bis 59
+        Beidseitiges->>FahrplanStrategie: rueckfahrtMitKollision(plan, i)
+        Beidseitiges->>BahnhofPlan: getTail().getPrev().isKollision()
+        alt letzte Segment hat noch Kollision
+            Beidseitiges->>Beidseitiges: continue (überspringen)
+        else keine Kollision am letzten Segment
+            Beidseitiges->>Beidseitiges: strafe = getSummeStrafen()
+            alt strafe < besteStrafe
+                Beidseitiges->>Beidseitiges: besteStrafe = strafe, besteStartzeit = i
+            end
+        end
+    end
+
+    Beidseitiges->>FahrplanStrategie: rueckfahrtMitKollision(plan, besteStartzeit)
+
+    alt besteStartzeit != 0 (Wartezeit vorhanden)
+        Beidseitiges->>FahrplanStrategie: beidseitigesWarten(plan, startZeitHin)
+        Note right of FahrplanStrategie: Teilt wartezeitRueck 50/50 auf Hin+Rück auf
+        FahrplanStrategie->>FahrplanStrategie: hinfahrtMitKollision(plan, startZeitHin)
+        FahrplanStrategie->>FahrplanStrategie: rueckfahrtMitKollision(plan, tail.abfahrtRueck + zeitverschiebung)
+    end
+    Beidseitiges-->>Main: fertig
+\end{lstlisting}
+
+\subsection{Sequenz 4: \texttt{AusgabeManager.druckeErgebnis()} und \texttt{printRow()}}
+
+\begin{lstlisting}[language=, caption={Sequenzdiagramm: Ausgabeaufbau mit printRow()}]
+sequenceDiagram
+    participant Main
+    participant AM as AusgabeManager
+    participant BahnhofPlan
+    participant BahnhofNode
+
+    Main->>AM: druckeErgebnis(strategie, plan)
+    AM->>AM: printRow("An ", n->ankunfthin, plan, false)
+    AM->>AM: printRow("Wa ", n->wartezeitHin, plan, false)
+    AM->>AM: printRow("Ab ", n->abfahrthin, plan, false)
+    AM->>AM: printRow("   ", n->name, plan, true)
+    Note right of AM: isStationRow=true: prüft isKollision() je Segment
+
+    loop Jeder BahnhofNode
+        AM->>BahnhofNode: wertExtraktor.apply(node)
+        AM->>BahnhofNode: isKollision() [nur Stationszeile]
+        alt Kollision
+            AM->>AM: füge "x" ein
+        end
+    end
+
+    AM->>AM: printRow("Ab ", n->abfahrtrueck, plan, false)
+    AM->>AM: printRow("Wa ", n->wartezeitRueck, plan, false)
+    AM->>AM: printRow("An ", n->ankunftrueck, plan, false)
+    AM->>BahnhofPlan: berechneMindestdauer(plan)
+    AM->>AM: Statistik berechnen (dauerHin, dauerRueck, Strafen)
+    AM-->>Main: String (komplette formatierte Ausgabe)
+\end{lstlisting}
+
+% ─────────────────────────────────────────
+\section{Detaillierte Beschreibung der wesentlichen Methoden}
+\label{sec:methoden}
+
+\subsection{\texttt{BahnhofNode.isKollision()}}
+
+\begin{tcolorbox}[colback=gray!5, colframe=gray!40, title=Methodensignatur]
+\texttt{public boolean isKollision()}
+\end{tcolorbox}
+
+\textbf{Zweck:} Stellt fest, ob auf dem Streckenabschnitt zwischen \texttt{this}
+und \texttt{this.next} eine Kollision zwischen Hin- und Rückfahrt vorliegt.
+
+\textbf{Vorbedingungen:}
+\begin{itemize}
+  \item \texttt{this.next != null} (letzter Bahnhof hat kein Folgesegment)
+  \item Alle vier Zeitfelder (\texttt{abfahrthin}, \texttt{next.ankunfthin},
+        \texttt{next.abfahrtrueck}, \texttt{ankunftrueck}) sind gesetzt
+\end{itemize}
+
+\textbf{Algorithmus:}
+
+\begin{enumerate}
+  \item Ermittle das Hinfahrt-Intervall: $[H_{Start}, H_{Ende}]$ =
+        [\texttt{this.abfahrthin}, \texttt{this.next.ankunfthin}]
+  \item Ermittle das Rückfahrt-Intervall: $[R_{Start}, R_{Ende}]$ =
+        [\texttt{this.next.abfahrtrueck}, \texttt{this.ankunftrueck}]
+  \item Übergebe beide Intervalle an \texttt{checkOverlap()} — prüft alle
+        60 Minuten: gibt es eine Minute, zu der beide Züge gleichzeitig
+        auf dem Segment sind?
+\end{enumerate}
+
+\begin{lstlisting}[language=Java, caption={\texttt{isKollision()} mit Hilfsmethoden}]
+public boolean isKollision() {
+    if (this.next == null) return false;
+    int hStart = this.abfahrthin;
+    int hEnde  = this.next.getAnkunfthin();
+    int rStart = this.next.getAbfahrtrueck();
+    int rEnde  = this.ankunftrueck;
+    return checkOverlap(hStart, hEnde, rStart, rEnde);
+}
+
+private boolean checkOverlap(int s1, int e1, int s2, int e2) {
+    for (int m = 0; m < 60; m++) {
+        if (isTimeInInterval(m, s1, e1) && isTimeInInterval(m, s2, e2))
+            return true;
+    }
+    return false;
+}
+
+private boolean isTimeInInterval(int t, int start, int ende) {
+    if (start <= ende) return t >= start && t <= ende;  // Normal
+    else               return t >= start || t <= ende;  // Wrap-around
+}
+\end{lstlisting}
+
+\textbf{Besonderheit Wrap-around:} Falls \texttt{start > ende} (Mitternacht
+überschreiten, z.\,B. Abfahrt 55, Ankunft 20), wird das Intervall als
+$[55..59] \cup [0..20]$ interpretiert. Die Methode \texttt{isTimeInInterval}
+löst dies durch eine \texttt{||}-Bedingung statt \texttt{\&\&}.
+
+\textbf{Beispiel:} Segment B→C, Hin [23,32], Rück [17,27]:
+Bei $m = 23$: \texttt{isTimeInInterval(23, 23, 32)} = true \emph{und}
+\texttt{isTimeInInterval(23, 17, 27)} = true → \textbf{Kollision}.
+
+% ────────────────────────────────────────────────────────────────────────────
+
+\subsection{\texttt{FahrplanStrategie.hinfahrtOhneKollision()}}
+
+\begin{tcolorbox}[colback=gray!5, colframe=gray!40, title=Methodensignatur]
+\texttt{public static void hinfahrtOhneKollision(BahnhofPlan plan, int startZeit)}
+\end{tcolorbox}
+
+\textbf{Zweck:} Berechnet alle Ankunfts- und Abfahrtszeiten der Hinfahrt
+(von \texttt{head} bis \texttt{tail}) ohne Wartezeit-Berücksichtigung.
+Wird von allen drei Strategien direkt oder indirekt genutzt.
+
+\textbf{Algorithmus:}
+
+\begin{enumerate}
+  \item Setze \texttt{head.abfahrthin = startZeit}
+  \item Für jeden Knoten \texttt{current} von \texttt{head} bis \texttt{tail-1}:
+    \begin{itemize}
+      \item \texttt{current.next.ankunfthin = (current.abfahrthin + distanceToNext) \% 60}
+      \item \texttt{current.next.abfahrthin = (ankunfthin + 1) \% 60}
+    \end{itemize}
+\end{enumerate}
+
+\begin{lstlisting}[language=Java, caption={\texttt{hinfahrtOhneKollision()}}]
+public static void hinfahrtOhneKollision(BahnhofPlan plan, int startZeit) {
+    BahnhofNode current = plan.getHead();
+    warteZeitHinReset(plan);
+    current.setAbfahrthin(startZeit);
+    while (current.getNext() != null) {
+        current.getNext().setAnkunfthin(
+            (current.getAbfahrthin() + current.getDistanceToNext()) % 60);
+        current.getNext().setAbfahrthin(
+            (current.getNext().getAnkunfthin() + 1) % 60);
+        current = current.getNext();
+    }
+}
+\end{lstlisting}
+
+\textbf{Beachte:} \texttt{warteZeitHinReset()} setzt alle \texttt{wartezeitHin}
+auf 0 bevor die Traversierung beginnt, da sonst Reste aus einem vorigen Durchlauf
+stören könnten.
+
+% ────────────────────────────────────────────────────────────────────────────
+
+\subsection{\texttt{FahrplanStrategie.rueckfahrtMitKollision()}}
+
+\begin{tcolorbox}[colback=gray!5, colframe=gray!40, title=Methodensignatur]
+\texttt{public static void rueckfahrtMitKollision(BahnhofPlan plan, int startZeit)}
+\end{tcolorbox}
+
+\textbf{Zweck:} Berechnet die Rückfahrt und korrigiert Wartezeiten bei Kollisionen.
+Diese Methode ist der Kernalgorithmus der Strategien 2 und 3.
+
+\textbf{Zweiphasiger Algorithmus:}
+
+\textbf{Phase 1} — Baseline ohne Wartezeit:
+\begin{itemize}
+  \item Ruft \texttt{rueckfahrtOhneKollision(plan, startZeit)} auf.
+  \item Setzt alle Rückfahrtzeiten ohne Korrekturen.
+\end{itemize}
+
+\textbf{Phase 2} — Rückwärts-Traversierung mit Kollisionskorrektur:
+\begin{itemize}
+  \item Beginnt bei \texttt{tail.prev} und läuft rückwärts bis \texttt{head}.
+  \item Bei jedem Knoten: Neuberechnung von \texttt{ankunftrueck} und
+        \texttt{abfahrtrueck} aus dem direkten Nachfolger (Kaskadeneffekt).
+  \item Falls \texttt{current.prev.isKollision()}: Wartezeit einfügen:
+        \[
+          \mathtt{wartezeitRueck} = (\mathtt{ankunftHin} - \mathtt{ankunftRueck} + 60) \% 60
+        \]
+  \item Abfahrt neu setzen: $\mathtt{abfahrtrueck} = (\mathtt{ankunftrueck} + \mathtt{wartezeitRueck} + 1) \% 60$
+\end{itemize}
+
+\begin{lstlisting}[language=Java, caption={\texttt{rueckfahrtMitKollision()} -- Phase 2}]
+current = plan.getTail().getPrev();
+while (current.getPrev() != null) {
+    // Neuberechnung aus Nachfolger (Kaskadenkorrektur)
+    current.setAnkunftrueck(
+        (current.getNext().getAbfahrtrueck() + current.getDistanceToNext()) % 60);
+    current.setAbfahrtrueck((current.getAnkunftrueck() + 1) % 60);
+    current.getPrev().setAnkunftrueck(
+        (current.getAbfahrtrueck() + current.getPrev().getDistanceToNext()) % 60);
+
+    if (current.getPrev().isKollision()) {
+        current.setWartezeitRueck(
+            (current.getAnkunfthin() - current.getAnkunftrueck() + 60) % 60);
+    }
+    current.setAbfahrtrueck(
+        (current.getAnkunftrueck() + current.getWartezeitRueck() + 1) % 60);
+    current = current.getPrev();
+}
+\end{lstlisting}
+
+\textbf{Warum Rückwärts?} Eine Wartezeit an Knoten $i$ verzögert die Abfahrt,
+was wiederum die Ankunft an Knoten $i-1$ verschiebt. Nur durch Rückwärts-Traversierung
+(in Fahrtrichtung der Rückreise) werden diese Kaskadeneffekte korrekt erfasst.
+
+% ────────────────────────────────────────────────────────────────────────────
+
+\subsection{\texttt{FahrplanStrategie.beidseitigesWarten()}}
+
+\begin{tcolorbox}[colback=gray!5, colframe=gray!40, title=Methodensignatur]
+\texttt{public static void beidseitigesWarten(BahnhofPlan plan, int startZeitHin)}
+\end{tcolorbox}
+
+\textbf{Zweck:} Verteilt die Wartezeit gleichmäßig auf Hin- und Rückfahrt,
+um die quadratische Strafe zu minimieren.
+
+\textbf{Mathematischer Hintergrund:}
+Für eine Gesamtwartezeit $W$ gilt:
+\[
+  W^2 \geq \left\lfloor\frac{W}{2}\right\rfloor^2 + \left\lceil\frac{W}{2}\right\rceil^2
+\]
+Gleichmäßige Aufteilung halbiert die Strafe annähernd gegenüber einseitigem Warten.
+
+\textbf{Algorithmus:}
+
+\begin{enumerate}
+  \item Traversiere Knoten von \texttt{head} bis \texttt{tail-1}.
+  \item Falls \texttt{wartezeitRueck > 1} (ungerade Werte: Rück bekommt 1 mehr):
+    \begin{itemize}
+      \item \texttt{wartezeitHin = wartezeitRueck / 2} (Integer-Division)
+      \item \texttt{wartezeitRueck = gesamtZeit - wartezeitHin}
+    \end{itemize}
+  \item Sammle die Verschiebung: \texttt{zeitverschiebung += wartezeitHin}
+  \item Berechne Hinfahrt neu mit \texttt{hinfahrtMitKollision(plan, startZeitHin)}.
+  \item Berechne Rückfahrt neu mit \texttt{rueckfahrtMitKollision(plan, tail.abfahrtrueck + zeitverschiebung)}.
+\end{enumerate}
+
+\begin{lstlisting}[language=Java, caption={\texttt{beidseitigesWarten()} -- Aufteilungslogik}]
+int zeitverschiebung = 0;
+while (head != null && head.getNext() != null) {
+    if (head.getWartezeitRueck() > 0 && head.getWartezeitRueck() != 1) {
+        int gesamtZeit = head.getWartezeitRueck();
+        head.setWartezeitHin(gesamtZeit / 2);
+        head.setWartezeitRueck(gesamtZeit - head.getWartezeitHin());
+        zeitverschiebung += head.getWartezeitHin();
+    }
+    head = head.getNext();
+}
+hinfahrtMitKollision(plan, startZeitHin);
+rueckfahrtMitKollision(plan,
+    plan.getTail().getAbfahrtrueck() + zeitverschiebung);
+\end{lstlisting}
+
+% ────────────────────────────────────────────────────────────────────────────
+
+\subsection{\texttt{BeidseitigesWartenStrategie.berechneFahrplan()}}
+
+\begin{tcolorbox}[colback=gray!5, colframe=gray!40, title=Methodensignatur]
+\texttt{public void berechneFahrplan(BahnhofPlan plan, int startZeitHin)}
+\end{tcolorbox}
+
+\textbf{Zweck:} Findet durch erschöpfende Suche über alle 60 Startzeiten die
+optimale Rückfahrtstartzeit.
+
+\textbf{Algorithmus:}
+
+\begin{enumerate}
+  \item \texttt{besteStrafe = Integer.MAX\_VALUE}, \texttt{besteStartzeit = -1}
+  \item \textbf{Für $i = 0$ bis $59$}:
+    \begin{enumerate}
+      \item Berechne \texttt{rueckfahrtMitKollision(plan, i)}
+      \item Falls \texttt{tail.prev.isKollision()}: Startzeit $i$ ist ungültig
+            (letztes Segment hat immer noch Kollision) → überspringen
+      \item Berechne \texttt{getSummeStrafen()}
+      \item Falls Strafe kleiner als beste Strafe → merken
+    \end{enumerate}
+  \item Berechne finale Rückfahrt mit \texttt{besteStartzeit}
+  \item Falls \texttt{besteStartzeit != 0}: Rufe \texttt{beidseitigesWarten()} auf
+\end{enumerate}
+
+\textbf{Zeitkomplexität:} $O(60 \cdot n)$ — 60 Startzeiten $\times$ $n$ Knoten
+pro Traversierung → linear in der Streckenlänge.
+
+% ────────────────────────────────────────────────────────────────────────────
+
+\subsection{\texttt{AusgabeManager.printRow()}}
+
+\begin{tcolorbox}[colback=gray!5, colframe=gray!40, title=Methodensignatur]
+\texttt{private static String printRow(String label,}\\
+\texttt{\quad Function<BahnhofNode, String> wertExtraktor,}\\
+\texttt{\quad BahnhofPlan plan, boolean isStationRow)}
+\end{tcolorbox}
+
+\textbf{Zweck:} Erzeugt eine einzelne horizontale Zeile der Ausgabetabelle.
+Durch Übergabe eines \texttt{Function}-Lambdas als Parameter wird eine einzige
+Methode für alle sieben Tabellenzeilen wiederverwendet.
+
+\textbf{Parameter:}
+\begin{itemize}
+  \item \texttt{label}: Linksbündiges Zeilenkürzel (z.\,B. \texttt{"An "})
+  \item \texttt{wertExtraktor}: Lambda, das aus einem Knoten den formatierten
+        Zellwert extrahiert (z.\,B. \texttt{n -> String.format("\%02d", n.getAnkunfthin())})
+  \item \texttt{isStationRow}: Falls \texttt{true} und das Segment eine
+        Kollision hat, wird ein \texttt{x} hinter dem Stationsnamen eingefügt
+\end{itemize}
+
+\textbf{Aufrufbeispiele aus \texttt{druckeErgebnis()}:}
+\begin{lstlisting}[language=Java]
+// Ankunft-Zeile Hinfahrt
+printRow("An ", n -> n.getAnkunfthin() != null
+    ? String.format("%02d", n.getAnkunfthin()) : "  ", plan, false);
+
+// Stationszeile (mit Kollisions-x)
+printRow("   ", n -> String.format("%2s", n.getName()), plan, true);
+
+// Wartezeit-Zeile Rückfahrt
+printRow("Wa ", n -> n.getWartezeitRueck() > 0
+    ? String.format("%02d", n.getWartezeitRueck()) : "  ", plan, false);
+\end{lstlisting}
+
+% ────────────────────────────────────────────────────────────────────────────
+
+\subsection{\texttt{EingabeLeser.leseDatei()}}
+
+\begin{tcolorbox}[colback=gray!5, colframe=gray!40, title=Methodensignatur]
+\texttt{public static SimulationsDaten leseDatei(String dateiPfad) throws IOException}
+\end{tcolorbox}
+
+\textbf{Zweck:} Liest eine Textdatei im vorgeschriebenen Format ein und baut
+daraus ein \texttt{SimulationsDaten}-Objekt auf.
+
+\textbf{Algorithmus (State-Machine über Zeilenindex):}
+
+\begin{enumerate}
+  \item Lese alle Zeilen mit \texttt{Files.readAllLines(Path.of(dateiPfad))}
+  \item Iteriere mit Index $i$ über alle Zeilen:
+    \begin{itemize}
+      \item Zeile $i$ == \texttt{"Strecke:"} → Zeile $i+1$ mit \texttt{split("\\s+")}
+            aufteilen; je Name \texttt{addBahnhof()} aufrufen
+      \item Zeile $i$ == \texttt{"Abstaende:"} → Zeile $i+1$ in \texttt{int[]}
+            umwandeln; \texttt{setAbstaende()} aufrufen
+      \item Zeile $i$ == \texttt{"Start Hinfahrt:"} → Zeile $i+1$ als
+            \texttt{Integer.parseInt()} lesen
+    \end{itemize}
+  \item Rückgabe: \texttt{new SimulationsDaten(bahnhofPlan, startZeit)}
+\end{enumerate}
+
+\textbf{Robustheit:} Die Methode verwendet \texttt{trim()} auf jede gelesene
+Zeile, um führende/nachfolgende Leerzeichen zu entfernen. Unbekannte Zeilen
+werden still ignoriert (kein Exception-Wurf bei leeren Zeilen).
+
+\textbf{Einschränkung (BUG-02):} \texttt{startZeit} wird nicht auf $[0,59]$
+normalisiert. Der Wert wird direkt von \texttt{Integer.parseInt()} übernommen.
+
+% ─────────────────────────────────────────
 \section{Zusammenfassung}
 
 Das Programm setzt das \textbf{Strategy Pattern} ein, um drei verschiedene Fahrplanberechnungsalgorithmen hinter einer einheitlichen Schnittstelle (\texttt{FahrplanStrategie}) zu kapseln. Die Kernalgorithmen werden als gemeinsame statische Methoden in der Basisklasse implementiert und von den konkreten Strategien wiederverwendet.
