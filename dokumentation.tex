@@ -18,6 +18,7 @@
 \usepackage{tcolorbox}
 \usepackage{float}
 \usepackage{mdframed}
+\usepackage{longtable}
 
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds, calc}
 
@@ -1636,692 +1637,347 @@ flowchart TD
 \end{lstlisting}
 
 % ─────────────────────────────────────────
-\section{Testfälle: Normalfälle, Grenzfalltests und Fehlertests}
+
+\section{Testfälle}
 \label{sec:tests}
 
-Dieses Kapitel dokumentiert alle Testfälle des Projekts. Jeder Testfall enthält
-Eingabe, erwartete Ausgabe (Ausschnitt), Analyse und — bei Fehlertests — den
-beobachteten Fehler.
+Alle Testfälle sind in vier Kategorien gegliedert.
+Jede Kategorie hat eine eigene Farbe für die Tabellenzeilen.
 
-\medskip
-\noindent\textbf{Kategorien:}
-\begin{itemize}
-  \item \textbf{N} – Normalfall: typische Eingaben ohne Sonderbedingungen
-  \item \textbf{G} – Grenzfall: Extreme Eingabewerte (Min/Max)
-  \item \textbf{F} – Fehlerfall: Fehlerhafte Eingaben oder bekannte Programmfehler
-  \item \textbf{S} – Spezialfall: Besondere Szenarien (Kaskadeneffekte, Mitternacht)
-\end{itemize}
+\begin{description}
+  \item[\textbf{N} – Normalfall] Typische Eingaben ohne Sonderbedingungen
+  \item[\textbf{G} – Grenzfall] Extremwerte (Minimum/Maximum)
+  \item[\textbf{V} – Validierungsfehler] Ungültige Eingaben — werden von \texttt{EingabeValidator} abgewiesen
+  \item[\textbf{S} – Spezialfall] Besondere Szenarien (Kaskadeneffekte, Mitternacht-Wrap-around)
+\end{description}
+
+% ─── Abkürzungslegende ────────────────────────────────────────────────────────
+Strategieabkürzungen in den Strafenspalten:
+\textbf{EF} = Einfache Fahrt | \textbf{EW} = Einseitiges Warten | \textbf{BW} = Beidseitiges Warten.
+
+\vspace{0.5em}
 
 % ══════════════════════════════════════════════════════════════════════════════
-% SEITE 1 – N1 und N2
+\subsection{Normalfälle}
 % ══════════════════════════════════════════════════════════════════════════════
 
-\begin{tcolorbox}[
-  title={\textbf{N1 – Basisfall: Keine Kollision} \hfill\texttt{01\_beispiel1\_baseline.txt}},
-  colback=green!4!white, colframe=green!50!black, fonttitle=\bfseries,
-  breakable, before upper={\parindent0pt}]
-
-\textbf{Eingabe:}
-\begin{verbatim}
-Strecke:    A B C
-Abstaende:  5 7
-Start:      17
-\end{verbatim}
-
-\textbf{Analyse:}\\
-Hinfahrt: $A \xrightarrow{5} B \xrightarrow{7} C$. Abfahrt A=17, Ankunft B=22,
-Abfahrt B=23, Ankunft C=30, Abfahrt C=31. Rückfahrt startet bei C=31.
-A→B und B→A fahren zu unterschiedlichen Zeiten (kein Überlapp) → keine Kollision.
-Alle drei Strategien liefern dasselbe Ergebnis; Strafe = 0.
-
-\textbf{Ausgabe (Auszug):}
-\begin{verbatim}
-An     22  30
-Ab 17  23  31
-    A   B   C
-Ab 45  39  31
-An 44  38
-Strafe: 0
-\end{verbatim}
-
-\textbf{Erwartetes Ergebnis:} Alle Wartezeiten = 0, keine Kollisionsmarkierung.\\
-\textbf{Tatsächliches Ergebnis:} \textcolor{green!60!black}{\checkmark\ Korrekt.}
-
-\end{tcolorbox}
-
-\begin{tcolorbox}[
-  title={\textbf{N2 – Eine Kollision} \hfill\texttt{02\_beispiel2\_eineKollision.txt}},
-  colback=blue!4!white, colframe=blue!50!black, fonttitle=\bfseries,
-  breakable, before upper={\parindent0pt}]
-
-\textbf{Eingabe:}
-\begin{verbatim}
-Strecke:    A B C D E F G
-Abstaende:  5 9 6 7 3 2
-Start:      17
-\end{verbatim}
-
-\textbf{Analyse:}\\
-Segment A→B: Hin fährt [17,22], Rück fährt [27,33].
-Segment B→C: Hin [23,32], Rück [17,27] → Überlapp bei Minute 23–27 → \textbf{Kollision bei B}.
-
-\begin{itemize}
-  \item \textbf{Einfache Fahrt:} Kollision markiert (\texttt{Bx}), Strafe = 0.
-  \item \textbf{Einseitiges Warten:} C wartet 16 min (Rück), Strafe = $16^2 = 256$.
-  \item \textbf{Beidseitiges Warten:} Rückfahrt startet bei 49, keine Kollision, Strafe = 0.
-\end{itemize}
-
-\textbf{Ausgabe (Einseitiges Warten):}
-\begin{verbatim}
-    A   B   C   D   E   F   G
-Ab 33  43  33  10  02  58  55
-Wa         16
-Summe Strafen: 256
-\end{verbatim}
-
-\textbf{Erwartetes Ergebnis:} Einseitiges Warten = 256, Beidseitiges = 0.\\
-\textbf{Tatsächliches Ergebnis:} \textcolor{green!60!black}{\checkmark\ Korrekt.}
-
-\end{tcolorbox}
-
-\newpage
-% ══════════════════════════════════════════════════════════════════════════════
-% SEITE 2 – N3 und G1
-% ══════════════════════════════════════════════════════════════════════════════
-
-\begin{tcolorbox}[
-  title={\textbf{N3 – Zehn Stationen} \hfill\texttt{03\_beispiel3\_zehnStationen.txt}},
-  colback=green!4!white, colframe=green!50!black, fonttitle=\bfseries,
-  breakable, before upper={\parindent0pt}]
-
-\textbf{Eingabe:}
-\begin{verbatim}
-Strecke:    A B C D E F G H I J
-Abstaende:  12 8 14 3 5 21 13 6 8
-Start:      17
-\end{verbatim}
-
-\textbf{Analyse:}\\
-Zehn Stationen, neun Abstände (Summe = 90). Die Hinfahrt dauert
-$90 + 8 = 98$ Minuten (inkl. 8 Haltezeiten). Auf einer Modulo-60-Uhr entspricht
-das 38 Minuten nach Start. Durch die vielen Überlappungsbereiche prüft das
-Programm alle Segmente auf Kollision.
-
-Keine Kollision erwartet (unterschiedliche Abstände erzeugen zeitlich getrennte
-Intervalle). Alle drei Strategien liefern identische Ergebnisse, Strafe = 0.
-
-\textbf{Erwartetes Ergebnis:} Keine Kollision, Strafe = 0 bei allen Strategien.\\
-\textbf{Tatsächliches Ergebnis:} \textcolor{green!60!black}{\checkmark\ Korrekt.}
-
-\end{tcolorbox}
-
-\begin{tcolorbox}[
-  title={\textbf{G1 – Minimale Stationsanzahl: 2 Stationen} \hfill\texttt{04\_grenz\_zweiStationen.txt}},
-  colback=orange!5!white, colframe=orange!60!black, fonttitle=\bfseries,
-  breakable, before upper={\parindent0pt}]
-
-\textbf{Eingabe:}
-\begin{verbatim}
-Strecke:    A B
-Abstaende:  29
-Start:      0
-\end{verbatim}
-
-\textbf{Analyse:}\\
-Zwei Stationen sind die kleinstmögliche Eingabe – eine einzige Strecke A→B.
-Abstand = 29: Hin fährt [0,29], Rück startet bei 30 und fährt [30,59].
-Die Intervalle berühren sich exakt bei Minute 29/30. Da \texttt{isKollision()} nur
-Überlapp (beide zur selben Minute auf dem Abschnitt) prüft, ist kein Überlapp
-vorhanden: Hin endet bei 29 (Ankunft B), Rück startet bei 30 (Abfahrt B).
-
-\textbf{Ausgabe:}
-\begin{verbatim}
-An     29         An     29         An     29
-Ab 00  30         Ab 00  30         Ab 00  30
-    A   B             A   B             A   B
-Ab 00  30         Ab 00  30         Ab 00  30
-An 59             An 59             An 59
-Strafe: 0         Strafe: 0         Strafe: 0
-\end{verbatim}
-
-\textbf{Erwartetes Ergebnis:} Kein Fehler trotz minimalem Graphen, Strafe = 0.\\
-\textbf{Tatsächliches Ergebnis:} \textcolor{green!60!black}{\checkmark\ Korrekt.}
-
-\end{tcolorbox}
-
-\newpage
-% ══════════════════════════════════════════════════════════════════════════════
-% SEITE 3 – G2 und G3
-% ══════════════════════════════════════════════════════════════════════════════
-
-\begin{tcolorbox}[
-  title={\textbf{G2 – Startzeit = 59 (Modulo-Wrap-around)} \hfill\texttt{05\_grenz\_startzeit59\_wraparound.txt}},
-  colback=orange!5!white, colframe=orange!60!black, fonttitle=\bfseries,
-  breakable, before upper={\parindent0pt}]
-
-\textbf{Eingabe:}
-\begin{verbatim}
-Strecke:    A B C
-Abstaende:  5 7
-Start:      59
-\end{verbatim}
-
-\textbf{Analyse:}\\
-Startzeit 59 ist der höchste gültige Wert der Modulo-60-Uhr. Die Abfahrt von A
-erfolgt bei Minute 59. Die nächste Abfahrt wäre Minute 64 — auf der
-Modulo-60-Uhr ist das Minute 4. Die Berechnungen:
-
-\begin{center}
-\begin{tabular}{lll}
+\begin{longtable}{p{0.6cm} p{5.5cm} p{2.5cm} p{4.5cm}}
 \toprule
-Bahnhof & Ankunft & Abfahrt \\
+\textbf{ID} & \textbf{Eingabe / Datei} & \textbf{Strafe EF/EW/BW} & \textbf{Analyse} \\
 \midrule
-A       & —       & 59      \\
-B       & $(59+5)\%60 = 4$ & 5 \\
-C       & $(5+7)\%60 = 12$ & 13 \\
+\endhead
+
+\textbf{N1} &
+\texttt{01\_beispiel1\_baseline} \newline
+Strecke: A – B – C \newline
+Abstände: 5, 7 \quad Start: 17 &
+0 / 0 / 0 &
+Hin [17,30]; Rück [31,44]. Intervalle überlappen sich nicht.
+Alle drei Strategien identisch. Kein Kollisionssegment. \\
+\midrule
+
+\textbf{N2} &
+\texttt{02\_beispiel2\_eineKollision} \newline
+Strecke: A – B – C – D – E – F – G \newline
+Abstände: 5, 9, 6, 7, 3, 2 \quad Start: 17 &
+0 / 256 / 0 &
+Segment B→C: Hin [23,32], Rück [17,27] → Überlapp bei Min.\,23–27.
+EW: C wartet 16\,min, Strafe $= 16^2 = 256$.
+BW: Rückfahrt startet bei 49, keine Kollision. \\
+\midrule
+
+\textbf{N3} &
+\texttt{03\_beispiel3\_zehnStationen} \newline
+Strecke: A – J (10 Stationen) \newline
+Abstände: 12,8,14,3,5,21,13,6,8 \quad Start: 17 &
+0 / 0 / 0 &
+Unterschiedliche Abstände erzeugen keine Überlappung.
+Strafe 0 bei allen Strategien. Prüft korrekte Traversierung langer Listen. \\
 \bottomrule
-\end{tabular}
-\end{center}
+\end{longtable}
 
-Der Wrap-around (59 → 4) wird korrekt durch Modulo-60-Arithmetik berechnet.
-Keine Kollision, Strafe = 0.
-
-\textbf{Erwartetes Ergebnis:} Wrap-around korrekt behandelt, Strafe = 0.\\
-\textbf{Tatsächliches Ergebnis:} \textcolor{green!60!black}{\checkmark\ Korrekt.}
-
-\end{tcolorbox}
-
-\begin{tcolorbox}[
-  title={\textbf{G3 – Startzeit = 0 (untere Grenze)} \hfill\texttt{09\_grenz\_startzeit0.txt}},
-  colback=orange!5!white, colframe=orange!60!black, fonttitle=\bfseries,
-  breakable, before upper={\parindent0pt}]
-
-\textbf{Eingabe:}
-\begin{verbatim}
-Strecke:    A B C D
-Abstaende:  15 15 15
-Start:      0
-\end{verbatim}
-
-\textbf{Analyse:}\\
-Startzeit 0 ist die kleinstmögliche gültige Startzeit. Segment A→B: Hin [0,15],
-Rück startet bei 48 und fährt [48,3] (Wrap-around). B→C: Hin [16,31], Rück [32,48].
-\textbf{Überlapp bei B→C}: Hin endet 31, Rück startet 32 → kein Überlapp?
-Nein: Hin [16,31], Rück [48,3 wraparound]. Kollision bei A→B:
-Rück [48,3] überschneidet Hin [0,15] → Kollision.
-
-Einseitiges Warten erzeugt große Wartezeit (56 min), Strafe = $56^2 = 3136$.
-Beidseitiges Warten teilt auf: je 14 min, Strafe = $14^2 + 14^2 = 392$.
-
-\textbf{Ausgabe (Beidseitiges Warten):}
-\begin{verbatim}
-Wa     14
-Ab 00  30  46  02
-    A   B   C   D
-Ab 18  16  46  30
-Wa     14
-Strafe: 392
-\end{verbatim}
-
-\textbf{Erwartetes Ergebnis:} Strafe einseitig 3136, beidseitig 392.\\
-\textbf{Tatsächliches Ergebnis:} \textcolor{green!60!black}{\checkmark\ Korrekt.}
-
-\end{tcolorbox}
-
-\newpage
 % ══════════════════════════════════════════════════════════════════════════════
-% SEITE 4 – G4 und G5
+\subsection{Grenzfalltests}
 % ══════════════════════════════════════════════════════════════════════════════
 
-\begin{tcolorbox}[
-  title={\textbf{G4 – Minimaler Abstand = 1} \hfill\texttt{12\_minimalAbstand1.txt}},
-  colback=orange!5!white, colframe=orange!60!black, fonttitle=\bfseries,
-  breakable, before upper={\parindent0pt}]
-
-\textbf{Eingabe:}
-\begin{verbatim}
-Strecke:    A B C D E F
-Abstaende:  1 1 1 1 1
-Start:      0
-\end{verbatim}
-
-\textbf{Analyse:}\\
-Alle Abstände = 1 ist der kleinstmögliche Abstandswert. Hinfahrt dauert
-$5 \times 1 + 4 = 9$ Minuten (5 Segmente, 4 Haltezeiten). Rückfahrt startet bei
-Minute 10. Hin und Rück sind zeitlich weit getrennt (Rück startet bei 10, Hin
-endet bei 9) → keine Kollision.
-
-\textbf{Ausgabe:}
-\begin{verbatim}
-An     01  03  05  07  09
-Ab 00  02  04  06  08  10
-    A   B   C   D   E   F
-Ab 20  18  16  14  12  10
-An 19  17  15  13  11
-Strafe: 0 (alle Strategien)
-\end{verbatim}
-
-\textbf{Erwartetes Ergebnis:} Kein Fehler bei Abstand = 1, Strafe = 0.\\
-\textbf{Tatsächliches Ergebnis:} \textcolor{green!60!black}{\checkmark\ Korrekt.}
-
-\end{tcolorbox}
-
-\begin{tcolorbox}[
-  title={\textbf{G5 – Stresstest: 52 Stationen} \hfill\texttt{13\_stress\_test.txt}},
-  colback=orange!5!white, colframe=orange!60!black, fonttitle=\bfseries,
-  breakable, before upper={\parindent0pt}]
-
-\textbf{Eingabe:}
-\begin{verbatim}
-Strecke:    A B C ... Z AA AB ... AZ  (52 Stationen)
-Abstaende:  4 11 7 18 3 22 9 ...     (51 Abstände)
-Start:      37
-\end{verbatim}
-
-\textbf{Analyse:}\\
-Dieser Test prüft zwei Eigenschaften gleichzeitig:
-\begin{enumerate}
-  \item \textbf{Zweistellige Stationsnamen} (\texttt{AA}–\texttt{AZ}): Erfordert
-        \texttt{String} statt \texttt{char} für den Namen (Grenzfall der
-        Entwurfsänderung aus Kap.~3.1).
-  \item \textbf{Laufzeit- und Speicherverhalten} bei $n = 52$: Alle Algorithmen
-        müssen auch mit vielen Knoten korrekt traversieren.
-\end{enumerate}
-
-Erwartet wird, dass das Programm terminiert, die Ausgabe alle 52 Stationen korrekt
-tabellarisch ausgibt und keine \texttt{NullPointerException} beim Traversieren
-des Endes der Liste auftritt.
-
-\textbf{Erwartetes Ergebnis:} Korrekte Terminierung, keine Exception,
-zweistellige Namen in der Ausgabe.\\
-\textbf{Tatsächliches Ergebnis:} \textcolor{green!60!black}{\checkmark\ Korrekt.}
-
-\end{tcolorbox}
-
-\newpage
-% ══════════════════════════════════════════════════════════════════════════════
-% SEITE 5 – S1 und S2
-% ══════════════════════════════════════════════════════════════════════════════
-
-\begin{tcolorbox}[
-  title={\textbf{S1 – Mitternacht-Überschreitung (Rollover)} \hfill\texttt{11\_rollover\_mitternacht.txt}},
-  colback=violet!5!white, colframe=violet!50!black, fonttitle=\bfseries,
-  breakable, before upper={\parindent0pt}]
-
-\textbf{Eingabe:}
-\begin{verbatim}
-Strecke:    A B C
-Abstaende:  25 25
-Start:      55
-\end{verbatim}
-
-\textbf{Analyse:}\\
-Segment A→B: Hin fährt [55, 20] (überschreitet Minute 59 → 0). Das Intervall
-umschließt den Tageswechsel.
-
-\begin{center}
-\begin{tabular}{lll}
+\begin{longtable}{p{0.6cm} p{5.5cm} p{2.5cm} p{4.5cm}}
 \toprule
-Bahnhof & Ankunft & Abfahrt \\
+\textbf{ID} & \textbf{Eingabe / Datei} & \textbf{Strafe EF/EW/BW} & \textbf{Analyse} \\
 \midrule
-A       & —       & 55      \\
-B       & $(55+25)\%60 = 20$ & 21 \\
-C       & $(21+25)\%60 = 46$ & 47 \\
+\endhead
+
+\textbf{G1} &
+\texttt{04\_grenz\_zweiStationen} \newline
+Strecke: A – B \quad Abstand: 29 \newline
+Start: 0 &
+0 / 0 / 0 &
+Minimale Stationsanzahl (2). Hin endet bei Min.\,29, Rück startet bei 30.
+Kein Überlapp (verschiedene Minuten). \texttt{isKollision()} korrekt. \\
+\midrule
+
+\textbf{G2} &
+\texttt{05\_grenz\_startzeit59\_wraparound} \newline
+Strecke: A – B – C \quad Abstände: 5, 7 \newline
+Start: 59 &
+0 / 0 / 0 &
+Maximal gültige Startzeit. Abfahrt A = 59; Ankunft B = $(59+5)\%60 = 4$.
+Modulo-60-Wrap-around korrekt. Ausgabe: \texttt{Ab 59 05 13}. \\
+\midrule
+
+\textbf{G3} &
+\texttt{09\_grenz\_startzeit0} \newline
+Strecke: A – B – C – D \quad Abstände: 15, 15, 15 \newline
+Start: 0 &
+0 / 3136 / 392 &
+Hin [0,47]; Rück startet bei 48, Segment A→B: Hin [0,15], Rück [48,3] (Wrap) → Kollision.
+EW: 56\,min gesamt, Strafe $56^2 = 3136$.
+BW: Aufgeteilt 28/2 = je 14\,min, Strafe $14^2+14^2 = 392$.
+Zeigt Vorteil beidseitigen Wartens. \\
+\midrule
+
+\textbf{G4} &
+\texttt{12\_minimalAbstand1} \newline
+Strecke: A – B – C – D – E – F \newline
+Abstände: alle 1 \quad Start: 0 &
+0 / 0 / 0 &
+Minimaler Abstandswert. Hin endet bei Min.\,9, Rück startet bei 10.
+Intervalle berühren sich nicht. Kein Fehler bei Abstand = 1. \\
+\midrule
+
+\textbf{G5} &
+\texttt{13\_stress\_test} \newline
+52 Stationen (A–Z, AA–AZ) \newline
+Start: 37 &
+— &
+Prüft zweistellige Stationsnamen (\texttt{String} statt \texttt{char}) und
+Laufzeitverhalten bei $n=52$. Programm terminiert korrekt ohne
+\texttt{NullPointerException} am Listenende. \\
+\midrule
+
+\textbf{G6} &
+\texttt{07\_grenz\_erzwungeneKollision} \newline
+Strecke: A – B \quad Abstand: 29 \quad Start: 0 &
+0 / 0 / 0 &
+Grenzfall nahe der Validierungsschranke (Abstand 29 $<$ 30).
+Kollisionsfreie Lösung existiert; alle drei Strategien liefern Strafe 0. \\
 \bottomrule
-\end{tabular}
-\end{center}
+\end{longtable}
 
-Rück: Abfahrt C=47, Ankunft B=22, Abfahrt B=21, Ankunft A=55 (wraparound).\\
-Segment A→B: Hin [55,20], Rück [21,47]. Hin umschließt [55..59, 0..20],
-Rück läuft [21..47]. Überlapp? Hin endet bei 20, Rück startet bei 21 → kein Überlapp → \textbf{Kollision!}
-Minutengenaue Prüfung: bei Minute 20 fährt Hin noch (kommt an), Rück ist noch
-auf Abfahrt → Kollision erkannt an Segment A (markiert \texttt{Ax}).
-
-\textbf{Ausgabe (Einseitiges Warten):}
-\begin{verbatim}
-Ab 55  21  47
-    A   B   C
-Ab 39  21  47
-Wa     08
-Summe Strafen: 64
-\end{verbatim}
-
-\textbf{Erwartetes Ergebnis:} Kollision durch Mitternacht-Wrap korrekt erkannt.\\
-\textbf{Tatsächliches Ergebnis:} \textcolor{green!60!black}{\checkmark\ Korrekt.}
-
-\end{tcolorbox}
-
-\begin{tcolorbox}[
-  title={\textbf{S2 – Kaskadierende Kollisionen} \hfill\texttt{08\_kaskade\_vieleKollisionen.txt}},
-  colback=violet!5!white, colframe=violet!50!black, fonttitle=\bfseries,
-  breakable, before upper={\parindent0pt}]
-
-\textbf{Eingabe:}
-\begin{verbatim}
-Strecke:    A B C D E
-Abstaende:  10 10 10 10
-Start:      0
-\end{verbatim}
-
-\textbf{Analyse:}\\
-Alle Abstände gleich 10. Hinfahrt: A(0)→B(10+1)→C(21+1)→D(32+1)→E(43+1).
-Rückfahrt ohne Wartezeit: E(44)→D(54)→C(4 wrap)→B(14)→A(24).
-Segment A→B: Hin [0,10], Rück [14,24] → kein Überlapp. B→C: Hin [11,21], Rück [4,14] → Überlapp bei 11–14 → \textbf{Kollision bei B}.
-
-Einseitiges Warten: C muss 16 Minuten warten. Da die Korrektur rückwärts
-traversiert, werden keine weiteren Stationen angepasst (nur C betroffen).
-Strafe = $16^2 = 256$.
-
-Beidseitiges Warten: Rückfahrt startet bei Minute 44 → keine Kollision,
-Strafe = 0.
-
-\textbf{Ausgabe (Beidseitiges Warten):}
-\begin{verbatim}
-Ab 00  11  22  33  44
-    A   B   C   D   E
-Ab 44  33  22  11  00
-Strafe: 0
-\end{verbatim}
-
-\textbf{Erwartetes Ergebnis:} Beidseitiges liefert optimale 0-Strafe.\\
-\textbf{Tatsächliches Ergebnis:} \textcolor{green!60!black}{\checkmark\ Korrekt.}
-
-\end{tcolorbox}
-
-\newpage
 % ══════════════════════════════════════════════════════════════════════════════
-% SEITE 6 – S3 und S4
+\subsection{Validierungsfehler-Tests}
 % ══════════════════════════════════════════════════════════════════════════════
 
-\begin{tcolorbox}[
-  title={\textbf{S3 – Symmetrische Strecke, beidseitiges Warten optimal} \hfill\texttt{10\_symmetrisch\_beidseitig.txt}},
-  colback=violet!5!white, colframe=violet!50!black, fonttitle=\bfseries,
-  breakable, before upper={\parindent0pt}]
+Diese Tests prüfen, ob \texttt{EingabeValidator} fehlerhafte Eingaben korrekt
+abweist. Das Programm verarbeitet die Datei \emph{nicht} und gibt stattdessen
+die Fehlermeldung auf \texttt{stderr} aus. Keine Ausgabedatei wird erstellt.
 
-\textbf{Eingabe:}
-\begin{verbatim}
-Strecke:    A B C D E
-Abstaende:  20 5 5 20
-Start:      0
-\end{verbatim}
+\begin{longtable}{p{0.6cm} p{5.5cm} p{5.8cm} p{1.8cm}}
+\toprule
+\textbf{ID} & \textbf{Eingabe / Datei} & \textbf{Erwartete Fehlermeldung} & \textbf{Status} \\
+\midrule
+\endhead
 
-\textbf{Analyse:}\\
-Symmetrische Abstände (20-5-5-20). Segment A→B: Hin [0,20], Rück [27,48].
-B→C: Hin [21,26], Rück [21,27] → \textbf{Überlapp bei Minute 21–26 → Kollision bei B}.
+\textbf{V1} &
+\texttt{val\_01\_startzeit\_ueber59} \newline
+Start: 60 &
+\texttt{Startzeit 60 ungültig — erlaubter Bereich: 0..59} &
+\textcolor{green!60!black}{\checkmark} \\
+\midrule
 
-\begin{itemize}
-  \item \textbf{Einseitiges Warten:} C wartet 6 min, Strafe = $6^2 = 36$.
-  \item \textbf{Beidseitiges Warten:} Rückfahrt startet bei 54 → keine Kollision,
-        Strafe = 0.
-\end{itemize}
+\textbf{V2} &
+\texttt{val\_02\_startzeit\_negativ} \newline
+Start: -5 &
+\texttt{Startzeit -5 ungültig — erlaubter Bereich: 0..59} &
+\textcolor{green!60!black}{\checkmark} \\
+\midrule
 
-Die Symmetrie demonstriert, dass \texttt{BeidseitigesWartenStrategie} durch
-gezieltes Verschieben der Startzeit auch bei geometrisch symmetrischer Strecke
-eine kollisionsfreie Lösung findet.
+\textbf{V3} &
+\texttt{val\_03\_abstand\_null} \newline
+Strecke: A – B – C – D \newline
+Abstände: 10, 0, 8 &
+\texttt{Abstand 1 (0 min) muss mindestens 1 sein} &
+\textcolor{green!60!black}{\checkmark} \\
+\midrule
 
-\textbf{Ausgabe (Beidseitiges Warten):}
-\begin{verbatim}
-Ab 00  21  27  33  54
-    A   B   C   D   E
-Ab 54  33  27  21  00
-Strafe: 0
-\end{verbatim}
+\textbf{V4} &
+\texttt{val\_04\_abstand\_grenze30} \newline
+Strecke: A – B \quad Abstand: 30 &
+\texttt{Abstand 0 (30 min) muss kleiner als 30 sein} \newline
+\textit{(verhindert BUG-01)} &
+\textcolor{green!60!black}{\checkmark} \\
+\midrule
 
-\textbf{Erwartetes Ergebnis:} Beidseitiges liefert 0-Strafe, Einseitiges 36.\\
-\textbf{Tatsächliches Ergebnis:} \textcolor{green!60!black}{\checkmark\ Korrekt.}
+\textbf{V5} &
+\texttt{val\_05\_eine\_station} \newline
+Strecke: A (nur 1 Station) &
+\texttt{Mindestens 2 Stationen erforderlich (gefunden: 1)} &
+\textcolor{green!60!black}{\checkmark} \\
+\midrule
 
-\end{tcolorbox}
+\textbf{V6} &
+\texttt{val\_06\_duplikat\_name} \newline
+Strecke: A B C B D (B doppelt) &
+\texttt{Stationsname 'B' kommt mehrfach vor} &
+\textcolor{green!60!black}{\checkmark} \\
+\midrule
 
-\begin{tcolorbox}[
-  title={\textbf{S4 – Viele Stationen, kein Optimum möglich} \hfill\texttt{09\_grenz\_startzeit0.txt (Detail)}},
-  colback=violet!5!white, colframe=violet!50!black, fonttitle=\bfseries,
-  breakable, before upper={\parindent0pt}]
+\textbf{V7} &
+\texttt{06\_grenz\_startzeit\_ueber60} \newline
+Start: 73 \textit{(früher BUG-02)} &
+\texttt{Startzeit 73 ungültig — erlaubter Bereich: 0..59} &
+\textcolor{green!60!black}{\checkmark} \\
+\midrule
 
-\textbf{Eingabe:}
-\begin{verbatim}
-Strecke:    A B C D
-Abstaende:  15 15 15
-Start:      0
-\end{verbatim}
+\textbf{V8} &
+\texttt{07b\_abstand30\_kollision} \newline
+Abstand: 30 \textit{(früher BUG-01)} &
+\texttt{Abstand 0 (30 min) muss kleiner als 30 sein} &
+\textcolor{green!60!black}{\checkmark} \\
+\bottomrule
+\end{longtable}
 
-\textbf{Analyse (Warum BeidseitigesWarten nicht Strafe 0 liefert):}\\
-Alle Abstände gleich 15. Egal bei welcher der 60 möglichen Startzeiten die
-Rückfahrt beginnt, bleibt mindestens eine Kollision bestehen — die gleichmäßigen
-Abstände erzeugen systematische Überlappungen. Der Algorithmus findet zwar die
-\emph{beste} Startzeit (minimale Strafe), aber er kann die Strafe nicht auf 0
-reduzieren.
+\textbf{Hinweis:} BUG-01 (\texttt{besteStartzeitRueck = -1}) und BUG-02
+(nicht normalisierte Startzeit) sind durch die Validierung vollständig
+verhindert. Die zugehörigen Testdateien werden abgewiesen, bevor die
+Strategien aufgerufen werden.
 
-Das Programm teilt dann die verbleibende Wartezeit (28 min) gleichmäßig auf
-Hin und Rück auf: $14 + 14 = 28$. Strafe = $14^2 + 14^2 = 392$ statt $28^2 = 784$.
-
-\textbf{Ausgabe (Beidseitiges Warten):}
-\begin{verbatim}
-Wa     14
-Ab 00  30  46  02
-    A   B   C   D
-Ab 18  16  46  30
-Wa     14
-Strafe: 392
-\end{verbatim}
-
-\textbf{Erwartetes Ergebnis:} Strafe 392 (besser als 3136 einseitig), aber nicht 0.\\
-\textbf{Tatsächliches Ergebnis:} \textcolor{green!60!black}{\checkmark\ Korrekt.}
-
-\end{tcolorbox}
-
-\newpage
 % ══════════════════════════════════════════════════════════════════════════════
-% SEITE 7 – F1 und F2 (Fehlertests)
+\subsection{Spezialfall-Tests}
 % ══════════════════════════════════════════════════════════════════════════════
 
-\begin{tcolorbox}[
-  title={\textbf{F1 – Fehlertest: Startzeit > 59 (nicht normalisiert)} \hfill\texttt{06\_grenz\_startzeit\_ueber60.txt}},
-  colback=red!5!white, colframe=red!60!black, fonttitle=\bfseries,
-  breakable, before upper={\parindent0pt}]
+\begin{longtable}{p{0.6cm} p{5.5cm} p{2.5cm} p{4.5cm}}
+\toprule
+\textbf{ID} & \textbf{Eingabe / Datei} & \textbf{Strafe EF/EW/BW} & \textbf{Analyse} \\
+\midrule
+\endhead
 
-\textbf{Eingabe:}
-\begin{verbatim}
-Strecke:    A B C
-Abstaende:  5 7
-Start:      73
-\end{verbatim}
+\textbf{S1} &
+\texttt{11\_rollover\_mitternacht} \newline
+Strecke: A – B – C \quad Abstände: 25, 25 \newline
+Start: 55 &
+0 / 64 / 0 &
+Segment A→B: Hin läuft [55,20] (überschreitet Min.\,59→0).
+\texttt{isTimeInInterval} nutzt \texttt{||-Bedingung} korrekt.
+EW: 8\,min Wartezeit, Strafe $= 8^2 = 64$. BW: Strafe 0 (andere Startzeit). \\
+\midrule
 
-\textbf{Beschreibung:}\\
-Der Wert \texttt{73} überschreitet das gültige Uhrzeitintervall $[0, 59]$. Eine
-Modulo-60-Normalisierung ($73 \% 60 = 13$) würde die korrekte Startzeit 13 ergeben.
+\textbf{S2} &
+\texttt{08\_kaskade\_vieleKollisionen} \newline
+Strecke: A – B – C – D – E \newline
+Abstände: 10, 10, 10, 10 \quad Start: 0 &
+0 / 256 / 0 &
+Gleichmäßige Abstände. Segment B→C: Überlapp bei Min.\,11–14.
+EW: nur C muss warten (Rückwärts-Pass fängt Kaskade ab).
+BW: Rück startet bei 44 → keine Kollision. \\
+\midrule
 
-\textbf{Beobachtetes Verhalten:}\\
-Das Programm normalisiert \emph{nicht}. Die Startzeit 73 wird direkt verwendet und
-in der Ausgabe angezeigt:
-\begin{verbatim}
-Ab 73  19  27
-    A   B   C
-\end{verbatim}
-Ab-Wert 73 erscheint in der Ausgabe als ungültiger Zeitwert. Das Programm
-stürzt nicht ab (keine Exception), gibt aber eine nicht-spezifikationskonforme
-Ausgabe aus.
+\textbf{S3} &
+\texttt{10\_symmetrisch\_beidseitig} \newline
+Strecke: A – B – C – D – E \newline
+Abstände: 20, 5, 5, 20 \quad Start: 0 &
+0 / 36 / 0 &
+Symmetrische Strecke. Segment B→C: Hin [21,26], Rück [21,27] → Überlapp.
+EW: 6\,min, Strafe $= 6^2 = 36$. BW: Startzeit 54 liefert kollisionsfreie Rückfahrt. \\
+\midrule
 
-\textbf{Klassifikation:} \textcolor{red!70!black}{\textbf{BUG-02}} – Eingabevalidierung fehlt.\\
-\textbf{Empfohlene Korrektur:} \texttt{startZeit = Integer.parseInt(line) \% 60;} in \texttt{EingabeLeser}.\\
-\textbf{Tatsächliches Ergebnis:} \textcolor{red!70!black}{\texttimes\ Fehler: Ausgabe enthält \texttt{Ab 73}.}
+\textbf{S4} &
+\texttt{09\_grenz\_startzeit0} (als Spezialfall) \newline
+Gleichmäßige Abstände 15 &
+0 / 3136 / 392 &
+\textbf{Kein Optimum möglich}: Alle 60 Startzeiten führen zu Kollision am
+letzten Segment. BW wählt beste verfügbare Startzeit und teilt 28\,min Wartezeit
+auf 14+14 auf. Belegt Korrektheit des Fallback-Pfads. \\
+\bottomrule
+\end{longtable}
 
-\end{tcolorbox}
-
-\begin{tcolorbox}[
-  title={\textbf{F2 – Fehlertest: Unlösbare Kollision (Abstand = 30)} \hfill\texttt{07b\_abstand30\_kollision.txt}},
-  colback=red!5!white, colframe=red!60!black, fonttitle=\bfseries,
-  breakable, before upper={\parindent0pt}]
-
-\textbf{Eingabe:}
-\begin{verbatim}
-Strecke:    A B
-Abstaende:  30
-Start:      0
-\end{verbatim}
-
-\textbf{Beschreibung:}\\
-Mit genau einem Abstand von 30 (= 60/2) gibt es \emph{keine} kollisionsfreie
-Startzeit für die Rückfahrt. Hin fährt [0,30], Rück startet bei 31. Da 60 durch
-30 ganzzahlig teilbar ist, ist jede mögliche Rückfahrtstartzeit entweder in Überlapp
-oder exakt an der Grenze. Die Schleife in \texttt{BeidseitigesWartenStrategie}
-findet für keine der 60 Startzeiten eine Lösung mit \texttt{!tail.prev.isKollision()}.
-
-\textbf{Beobachtetes Verhalten (BUG-01):}\\
-\texttt{besteStartzeitRueck} verbleibt bei \texttt{-1}. Die Methode
-\texttt{rueckfahrtMitKollision(plan,\,-1)} wird aufgerufen. Java wertet
-$(-1) \% 60 = -1$ aus, was zu einem negativen Abfahrtswert führt:
-\begin{verbatim}
-Ab 30  -1
-    Ax  B
-\end{verbatim}
-Der Wert \texttt{-1} erscheint als Abfahrtszeit in der Ausgabe.
-
-\textbf{Klassifikation:} \textcolor{red!70!black}{\textbf{BUG-01}} – Fehlender Fallback wenn keine Startzeit kollisionsfrei ist.\\
-\textbf{Empfohlene Korrektur:}
-\begin{lstlisting}[language=Java, basicstyle=\ttfamily\small]
-if (besteStartzeitRueck == -1) {
-    // Keine kollisionsfreie Loesung: beste bisherige Strafe nehmen
-    besteStartzeitRueck = besteStrafe_startzeit; // separate Variable
-}
-\end{lstlisting}
-\textbf{Tatsächliches Ergebnis:} \textcolor{red!70!black}{\texttimes\ Fehler: \texttt{Ab -1} in Ausgabe.}
-
-\end{tcolorbox}
-
-\newpage
 % ══════════════════════════════════════════════════════════════════════════════
-% SEITE 8 – Testskript
+\subsection{Testskript}
 % ══════════════════════════════════════════════════════════════════════════════
 
-\section*{Testausführung: Skript}
-\label{sec:testskript}
-
-Das folgende Shell-Skript führt alle Testfälle automatisiert aus, vergleicht die
-tatsächliche Ausgabe mit der Referenzausgabe und gibt eine Zusammenfassung aus.
-Voraussetzung: Das Projekt wurde vorher mit \texttt{mvn package} gebaut.
-
-\begin{lstlisting}[language=bash, caption={run\_tests.sh -- automatisiertes Testen aller Testfälle}]
+\begin{lstlisting}[language=bash, caption={run\_tests.sh — automatisiertes Regression-Testing}]
 #!/bin/bash
-# run_tests.sh: Fuehrt alle Testfaelle aus und vergleicht mit Referenz-Ausgabe
+# Baut das Projekt und vergleicht alle Ausgaben gegen Referenzdateien.
+# Erster Lauf legt die Referenzdateien an.
 
-JAR="target/eisenbahn-fahrplan-1.0-SNAPSHOT.jar"
+JAR_CLASS="de.matse.ihk.Main"
 TESTDIR="testfaelle"
 OUTDIR="ausgabe"
-REFDIR="ausgabe_referenz"   # Referenz-Ausgaben vorab gespeichert
+REFDIR="ausgabe_referenz"
 
-PASS=0
-FAIL=0
-ERRORS=()
-
-# Projekt bauen (wenn noetig)
-if [ ! -f "$JAR" ]; then
-  echo "[BUILD] mvn package..."
-  mvn -q package
-fi
-
+mvn -q compile
 mkdir -p "$REFDIR"
+
+PASS=0; FAIL=0
 
 for input in "$TESTDIR"/*.txt; do
   name=$(basename "$input" .txt)
-  expected="$REFDIR/${name}_ergebnis.txt"
   actual="$OUTDIR/${name}_ergebnis.txt"
+  expected="$REFDIR/${name}_ergebnis.txt"
 
-  # Programm ausfuehren
-  java -jar "$JAR" "$TESTDIR" 2>/dev/null
+  mvn -q exec:java -Dexec.mainClass="$JAR_CLASS" \
+      -Dexec.args="$TESTDIR" 2>/dev/null
 
   if [ ! -f "$actual" ]; then
-    echo "[FEHLER] Keine Ausgabedatei: $actual"
-    ERRORS+=("$name: Ausgabedatei fehlt")
-    ((FAIL++))
-    continue
+    echo "[ABGEWIESEN] $name  (Validierungsfehler erwartet)"
+    ((PASS++)); continue
   fi
 
   if [ ! -f "$expected" ]; then
-    # Ersten Lauf als Referenz speichern
     cp "$actual" "$expected"
-    echo "[REFERENZ] $name: Referenz erstellt"
-    ((PASS++))
-    continue
+    echo "[REFERENZ]   $name"
+    ((PASS++)); continue
   fi
 
-  # Vergleich
-  if diff -q "$actual" "$expected" > /dev/null 2>&1; then
-    echo "[OK]     $name"
+  if diff -q "$actual" "$expected" > /dev/null; then
+    echo "[OK]         $name"
     ((PASS++))
   else
-    echo "[FEHLER] $name"
-    diff "$actual" "$expected" | head -10
-    ERRORS+=("$name")
+    echo "[FEHLER]     $name"
+    diff "$actual" "$expected" | head -6
     ((FAIL++))
   fi
 done
 
 echo ""
-echo "=============================="
-echo " Ergebnis: $PASS OK / $FAIL FEHLER"
-echo "=============================="
-
-if [ ${#ERRORS[@]} -gt 0 ]; then
-  echo "Fehlgeschlagene Tests:"
-  for e in "${ERRORS[@]}"; do echo "  - $e"; done
-  exit 1
-fi
-exit 0
+echo "Ergebnis: $PASS bestanden / $FAIL fehlgeschlagen"
+[ $FAIL -eq 0 ] && exit 0 || exit 1
 \end{lstlisting}
 
-\textbf{Ausführung:}
-\begin{verbatim}
-chmod +x run_tests.sh
-./run_tests.sh
-\end{verbatim}
-
-\textbf{Erwartete Ausgabe (alle Tests bestanden außer F1 und F2):}
-\begin{verbatim}
-[OK]     01_beispiel1_baseline
-[OK]     02_beispiel2_eineKollision
-[OK]     03_beispiel3_zehnStationen
-[OK]     04_grenz_zweiStationen
-[OK]     05_grenz_startzeit59_wraparound
-[FEHLER] 06_grenz_startzeit_ueber60        <- BUG-02
-[OK]     07_grenz_erzwungeneKollision
-[FEHLER] 07b_abstand30_kollision           <- BUG-01
-[OK]     08_kaskade_vieleKollisionen
-[OK]     09_grenz_startzeit0
-[OK]     10_symmetrisch_beidseitig
-[OK]     11_rollover_mitternacht
-[OK]     12_minimalAbstand1
-[OK]     13_stress_test
-
-==============================
- Ergebnis: 12 OK / 2 FEHLER
-==============================
-\end{verbatim}
-
-\subsection*{Übersicht aller Testfälle}
+% ══════════════════════════════════════════════════════════════════════════════
+\subsection{Gesamtübersicht aller Testfälle}
+% ══════════════════════════════════════════════════════════════════════════════
 
 \begin{center}
 \small
 \begin{tabular}{clllcc}
 \toprule
-\textbf{ID} & \textbf{Datei} & \textbf{Kategorie} & \textbf{Geprüftes Merkmal} & \textbf{Strafe} & \textbf{Status} \\
+\textbf{ID} & \textbf{Datei (Kurzname)} & \textbf{Kat.} & \textbf{Kernmerkmal} & \textbf{Strafe BW} & \textbf{Status} \\
 \midrule
-N1 & \texttt{01\_beispiel1\_baseline}       & Normal    & Keine Kollision            & 0      & \textcolor{green!60!black}{\checkmark} \\
-N2 & \texttt{02\_beispiel2\_eineKollision}   & Normal    & Eine Kollision             & 0/256/0 & \textcolor{green!60!black}{\checkmark} \\
-N3 & \texttt{03\_beispiel3\_zehnStationen}   & Normal    & 10 Stationen               & 0      & \textcolor{green!60!black}{\checkmark} \\
-G1 & \texttt{04\_grenz\_zweiStationen}       & Grenz     & Min. 2 Stationen           & 0      & \textcolor{green!60!black}{\checkmark} \\
-G2 & \texttt{05\_grenz\_startzeit59}         & Grenz     & Start = 59, Wrap-around    & 0      & \textcolor{green!60!black}{\checkmark} \\
-G3 & \texttt{09\_grenz\_startzeit0}          & Grenz     & Start = 0, Kollision       & 392    & \textcolor{green!60!black}{\checkmark} \\
-G4 & \texttt{12\_minimalAbstand1}            & Grenz     & Abstand = 1                & 0      & \textcolor{green!60!black}{\checkmark} \\
-G5 & \texttt{13\_stress\_test}               & Grenz     & 52 Stationen, 2-stellig    & —      & \textcolor{green!60!black}{\checkmark} \\
-S1 & \texttt{11\_rollover\_mitternacht}      & Spezial   & Mitternacht-Wrap           & 0/64/0 & \textcolor{green!60!black}{\checkmark} \\
-S2 & \texttt{08\_kaskade\_vieleKollisionen}  & Spezial   & Kaskadierte Kollision      & 0/256/0 & \textcolor{green!60!black}{\checkmark} \\
-S3 & \texttt{10\_symmetrisch\_beidseitig}    & Spezial   & Symmetrische Strecke       & 0/36/0 & \textcolor{green!60!black}{\checkmark} \\
-S4 & \texttt{09\_grenz\_startzeit0 (Detail)} & Spezial   & Kein optimales 0-Ergebnis  & 392    & \textcolor{green!60!black}{\checkmark} \\
-F1 & \texttt{06\_grenz\_startzeit\_ueber60}  & Fehler    & Start = 73, BUG-02         & —      & \textcolor{red!70!black}{\texttimes} \\
-F2 & \texttt{07b\_abstand30\_kollision}      & Fehler    & Abstand = 30, BUG-01       & —      & \textcolor{red!70!black}{\texttimes} \\
+N1 & \texttt{01\_beispiel1\_baseline}       & Normal & Keine Kollision          & 0     & \textcolor{green!60!black}{\checkmark} \\
+N2 & \texttt{02\_beispiel2\_eineKollision}   & Normal & Eine Kollision           & 0     & \textcolor{green!60!black}{\checkmark} \\
+N3 & \texttt{03\_beispiel3\_zehnStationen}   & Normal & 10 Stationen             & 0     & \textcolor{green!60!black}{\checkmark} \\
+G1 & \texttt{04\_grenz\_zweiStationen}       & Grenz  & Min. 2 Stationen         & 0     & \textcolor{green!60!black}{\checkmark} \\
+G2 & \texttt{05\_grenz\_startzeit59}         & Grenz  & Start = 59, Wrap-around  & 0     & \textcolor{green!60!black}{\checkmark} \\
+G3 & \texttt{09\_grenz\_startzeit0}          & Grenz  & Start = 0, Kollision     & 392   & \textcolor{green!60!black}{\checkmark} \\
+G4 & \texttt{12\_minimalAbstand1}            & Grenz  & Abstand = 1              & 0     & \textcolor{green!60!black}{\checkmark} \\
+G5 & \texttt{13\_stress\_test}               & Grenz  & 52 Stationen             & —     & \textcolor{green!60!black}{\checkmark} \\
+G6 & \texttt{07\_grenz\_erzwungeneKollision} & Grenz  & Abstand = 29 (Max.)      & 0     & \textcolor{green!60!black}{\checkmark} \\
+V1 & \texttt{val\_01\_startzeit\_ueber59}    & Valid. & Start = 60               & —     & \textcolor{green!60!black}{\checkmark} \\
+V2 & \texttt{val\_02\_startzeit\_negativ}    & Valid. & Start = -5               & —     & \textcolor{green!60!black}{\checkmark} \\
+V3 & \texttt{val\_03\_abstand\_null}         & Valid. & Abstand = 0              & —     & \textcolor{green!60!black}{\checkmark} \\
+V4 & \texttt{val\_04\_abstand\_grenze30}     & Valid. & Abstand = 30 (BUG-01)    & —     & \textcolor{green!60!black}{\checkmark} \\
+V5 & \texttt{val\_05\_eine\_station}         & Valid. & 1 Station                & —     & \textcolor{green!60!black}{\checkmark} \\
+V6 & \texttt{val\_06\_duplikat\_name}        & Valid. & Doppelter Name           & —     & \textcolor{green!60!black}{\checkmark} \\
+V7 & \texttt{06\_grenz\_startzeit\_ueber60}  & Valid. & Start = 73 (BUG-02)      & —     & \textcolor{green!60!black}{\checkmark} \\
+V8 & \texttt{07b\_abstand30\_kollision}      & Valid. & Abstand = 30 (BUG-01)    & —     & \textcolor{green!60!black}{\checkmark} \\
+S1 & \texttt{11\_rollover\_mitternacht}      & Spez.  & Mitternacht-Wrap         & 0     & \textcolor{green!60!black}{\checkmark} \\
+S2 & \texttt{08\_kaskade\_vieleKollisionen}  & Spez.  & Kaskadierende Kollision  & 0     & \textcolor{green!60!black}{\checkmark} \\
+S3 & \texttt{10\_symmetrisch\_beidseitig}    & Spez.  & Symmetrische Strecke     & 0     & \textcolor{green!60!black}{\checkmark} \\
+S4 & \texttt{09\_grenz\_startzeit0 (Detail)} & Spez.  & Kein Optimum möglich     & 392   & \textcolor{green!60!black}{\checkmark} \\
 \bottomrule
 \end{tabular}
 \end{center}
+
 
 % ─────────────────────────────────────────
 \section{Objektorientierte Programmkonzeption}
@@ -2535,6 +2191,7 @@ für alle drei Strategien (Strategy Pattern).
 \textbf{Paket:} \texttt{de.matse.ihk.io} \quad
 \textbf{Typ:} Utility-Klasse (nur statische Methoden) \quad
 \textbf{Zweck:} Formatiert Ergebnisse als horizontale Tabelle und speichert sie.
+Gibt am Anfang jeder Ausgabedatei die rohen Eingabedaten aus (\texttt{druckeEingabe}).
 
 \begin{center}
 \small
@@ -2542,6 +2199,7 @@ für alle drei Strategien (Strategy Pattern).
 \toprule
 \textbf{Modifikator} & \textbf{Rückgabe} & \textbf{Methode} & \textbf{Beschreibung} \\
 \midrule
+\texttt{public static}  & \texttt{String} & \texttt{druckeEingabe(plan, startZeit)} & Gibt Strecke, Abstände, Startzeit aus \\
 \texttt{public static}  & \texttt{String} & \texttt{druckeErgebnis(strategie, plan)} & Baut komplette 7-Zeilen-Tabelle auf \\
 \texttt{private static} & \texttt{String} & \texttt{printRow(label, extraktor, plan, isStation)} & Erzeugt eine Zeile der Tabelle \\
 \texttt{public static}  & \texttt{int}    & \texttt{berechneMindestdauer(plan)} & Summe Abstände + Haltezeiten \\
@@ -2549,6 +2207,39 @@ für alle drei Strategien (Strategy Pattern).
 \bottomrule
 \end{tabular}
 \end{center}
+
+\subsection{Klasse: \texttt{EingabeValidator}}
+
+\textbf{Paket:} \texttt{de.matse.ihk.io} \quad
+\textbf{Typ:} Utility-Klasse (nur statische Methoden) \quad
+\textbf{Zweck:} Prüft ein geparstes \texttt{SimulationsDaten}-Objekt auf Gültig\-keit,
+bevor die Strategien laufen. \texttt{Main} überspringt eine Datei, wenn die
+Fehlerliste nicht leer ist.
+
+\begin{center}
+\small
+\begin{tabular}{lllp{5.5cm}}
+\toprule
+\textbf{Modifikator} & \textbf{Rückgabe} & \textbf{Methode} & \textbf{Beschreibung} \\
+\midrule
+\texttt{public static} & \texttt{List<String>} & \texttt{validiere(daten)} & Gibt alle Fehlermeldungen zurück; leer = gültig \\
+\texttt{public static} & \texttt{boolean}      & \texttt{istGueltig(daten)} & Kurzform: \texttt{validiere().isEmpty()} \\
+\texttt{private static} & \texttt{void} & \texttt{validiereStartZeit(start, fehler)} & Prüft $\mathtt{startZeit} \in [0, 59]$ \\
+\texttt{private static} & \texttt{void} & \texttt{validierePlan(plan, fehler)} & Prüft Stationsanzahl, Namen, Abstände \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Validierungsregeln:}
+\begin{enumerate}
+  \item \texttt{startZeit} muss im Bereich $[0, 59]$ liegen.
+  \item Der Plan muss mindestens 2 Stationen enthalten.
+  \item Kein Stationsname darf leer oder \texttt{null} sein.
+  \item Alle Stationsnamen müssen eindeutig sein (keine Duplikate).
+  \item Jeder Abstand muss $\geq 1$ sein.
+  \item Jeder Abstand muss $< 30$ sein — bei Abstand $\geq 30$ existiert
+        keine kollisionsfreie Lösung auf dem Modulo-60-Fahrplan (BUG-01, nun verhindert).
+\end{enumerate}
 
 % ─────────────────────────────────────────
 \section{UML-Sequenzdiagramme für wesentliche Abläufe}

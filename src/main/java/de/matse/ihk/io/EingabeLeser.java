@@ -8,11 +8,20 @@ import java.util.List;
 import de.matse.ihk.model.BahnhofPlan;
 import de.matse.ihk.model.SimulationsDaten;
 
+/**
+ * Reads a plain-text input file and builds a {@link SimulationsDaten} object from it.
+ * The file format uses keyword lines ({@code Strecke:}, {@code Abstaende:},
+ * {@code Start Hinfahrt:}) followed by their data on the next line.
+ */
 public class EingabeLeser {
+
+    /**
+     * Parses {@code dateiPfad} and returns the station plan together with the start time.
+     * Unknown lines are silently ignored; no normalisation of startZeit is performed.
+     *
+     * @throws IOException if the file cannot be read
+     */
     public static SimulationsDaten leseDatei(String dateiPfad) throws IOException {
-        // Implementiere die Logik zum Einlesen der Datei und Erstellen eines SimulationsDaten-Objekts
-        // Beispiel: Lese die Datei, parse die Daten und erstelle ein BahnhofPlan-Objekt sowie die Startzeit
-        // Rückgabe: new SimulationsDaten(bahnhofPlan, startZeit);
         List<String> zeilen = Files.readAllLines(Path.of(dateiPfad));
 
         BahnhofPlan bahnhofPlan = new BahnhofPlan();

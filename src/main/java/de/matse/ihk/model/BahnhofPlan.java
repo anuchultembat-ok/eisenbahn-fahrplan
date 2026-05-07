@@ -2,11 +2,18 @@ package de.matse.ihk.model;
 
 import java.util.List;
 
-public class BahnhofPlan{
-    private BahnhofNode head; 
-    private BahnhofNode tail; 
-    private int groesse = 0; 
+/**
+ * The doubly linked list of stations representing one railway route.
+ * Provides builder methods ({@link #addBahnhof}, {@link #setAbstaende}),
+ * a {@link #reset()} to clear computed times between strategy runs,
+ * and a deep-copy constructor.
+ */
+public class BahnhofPlan {
+    private BahnhofNode head;
+    private BahnhofNode tail;
+    private int groesse = 0;
 
+    /** Appends a new station with the given name at the end of the list. */
     public void addBahnhof(String name) {
         BahnhofNode newNode = new BahnhofNode(name);
         if(head == null){
@@ -19,8 +26,14 @@ public class BahnhofPlan{
         }
         groesse++;
     }
-    public BahnhofPlan(){}
-    public void setAbstaende(int[] abstaende){
+    public BahnhofPlan() {}
+
+    /**
+     * Assigns travel times to segments in list order.
+     * {@code abstaende[i]} is set on the node at position {@code i};
+     * the last node is skipped because it has no outgoing segment.
+     */
+    public void setAbstaende(int[] abstaende) {
         BahnhofNode current = head; 
         int index = 0; 
         while(current != null && index < abstaende.length){
@@ -43,10 +56,10 @@ public class BahnhofPlan{
         return groesse;
     }
 
+/** Clears all computed time fields so the same plan object can be reused by the next strategy. */
 public void reset() {
     BahnhofNode current = this.head;
     while (current.getNext() != null) {
-        // Zeiten auf null setzen (Wichtig: Nutze Integer statt int, wie besprochen)
         current.setAnkunfthin(null);
         current.setAbfahrthin(null);
         current.setAnkunftrueck(null);
