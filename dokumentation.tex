@@ -328,6 +328,253 @@ Die Hinfahrtdaten (gesetzt von Strategie~1) sind für alle drei Strategien ident
 \end{figure}
 
 % ─────────────────────────────────────────
+\section{Entwurfsänderungen gegenüber dem ursprünglichen Design}
+
+Während der Implementierung wurden gegenüber dem initialen Entwurf mehrere
+Designentscheidungen revidiert. Dieses Kapitel dokumentiert die wichtigsten
+Änderungen, deren Ursachen und die jeweils gewählte Lösung.
+
+% ── 3.1 char → String ──────────────────────────────────────────────────────
+\subsection{\texttt{BahnhofNode.name}: \texttt{char} \textrightarrow{} \texttt{String}}
+
+\textbf{Ursprünglicher Entwurf:} Das Feld \texttt{name} in \texttt{BahnhofNode} war als
+\texttt{char} geplant – ein einzelnes Zeichen für die Stationsbezeichnung.
+
+\textbf{Problem:} Mit \texttt{char} lassen sich maximal 26 lateinische Großbuchstaben
+(A–Z) oder bei doppelter Kodierung maximal 35 Stationen darstellen. Der
+Stresstest (\texttt{13\_stress\_test.txt}) mit 52 Stationen erfordert
+zweistellige Namen wie \texttt{AA}, \texttt{AB}, \ldots
+
+\textbf{Lösung:} \texttt{char name} wurde durch \texttt{String name} ersetzt.
+\texttt{String} erlaubt beliebig lange Bezeichner ohne sonstigen Codeaufwand, da
+alle Formatierungen ohnehin über \texttt{String}-Verkettung erfolgen.
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Aspekt} & \textbf{Alt (\texttt{char})} & \textbf{Neu (\texttt{String})} \\
+\midrule
+Typ             & \texttt{private char name}   & \texttt{private String name}   \\
+Max. Stationen  & 26 (A–Z)                     & unbegrenzt                     \\
+Vergleich       & \texttt{name == 'A'}         & \texttt{name.equals("A")}      \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ── 3.2 Kette + BahnhofNode → BahnhofNode ──────────────────────────────────
+\subsection{Konsolidierung von \texttt{Kette} und \texttt{BahnhofNode}}
+
+\textbf{Ursprünglicher Entwurf:} Es gab zwei separate Klassen:
+
+\begin{itemize}
+  \item \texttt{BahnhofNode} – enthielt ausschließlich die Zeitdaten eines Bahnhofs
+        (\texttt{ankunftHin}, \texttt{abfahrtHin}, \texttt{wartezeit}).
+  \item \texttt{Kette} – hielt die Listenverknüpfung (\texttt{prev}, \texttt{next},
+        \texttt{distance}, \texttt{current}) sowie eine eigene
+        \texttt{isKollision()}-Methode.
+\end{itemize}
+
+Die originale \texttt{Kette.isKollision()} verwendete eine einfache
+Ungleichungsprüfung ohne Uhrzeit-Wrap-around:
+
+\begin{lstlisting}[language=Java, caption={Ursprüngliche \texttt{Kette.isKollision()} -- ohne Wrap-around}]
+public boolean isKollision() {
+    if ( (current.getAbfahrthin() > next.getAbfahrtrueck() &&
+           next.getAnkunfthin() + 1 < next.getAbfahrtrueck()) ||
+         (current.getAbfahrthin() >= current.getAnkunftrueck() &&
+           next.getAnkunfthin() + 1 < current.getAnkunftrueck()) ) {
+        return true;
+    }
+    return false;
+}
+\end{lstlisting}
+
+\textbf{Problem:} Die Trennung erzeugte eine zirkuläre Abhängigkeit
+(\texttt{Kette} hält \texttt{BahnhofNode}-Referenzen, aber der Knoten kennt seine
+Nachbarn nicht). Die \texttt{Kette}-Formel berücksichtigte keine Zeitwerte, die
+Mitternacht überschreiten (z.\,B. Abfahrt 58, Ankunft 3).
+
+\textbf{Lösung:} Die Felder \texttt{next}, \texttt{prev} und \texttt{distanceToNext}
+wurden direkt in \texttt{BahnhofNode} verschoben; die Klasse \texttt{Kette} wurde
+entfernt. Die neue \texttt{isKollision()} in \texttt{BahnhofNode} arbeitet
+minutengenau mit Modulo-60-Wrap-around (siehe Kapitel~\ref{sec:kollision}).
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Aspekt}           & \textbf{Alt (zwei Klassen)}          & \textbf{Neu (eine Klasse)}            \\
+\midrule
+Listenstruktur            & \texttt{Kette.prev/next/distance}    & \texttt{BahnhofNode.prev/next/distanceToNext} \\
+Kollisionsprüfung         & \texttt{Kette.isKollision()}         & \texttt{BahnhofNode.isKollision()}    \\
+Wrap-around               & Nein                                 & Ja (Modulo 60)                        \\
+Traversierung             & über \texttt{Kette}-Objekte          & direkt über \texttt{node.next}        \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ── 3.3 Simulation-Klasse entfernt ──────────────────────────────────────────
+\subsection{Entfernung der geplanten \texttt{Simulation}-Klasse}
+
+\textbf{Ursprünglicher Entwurf:} Eine Klasse \texttt{Simulation} sollte die
+Schleife über alle drei Strategien und die Ausgabesteuerung übernehmen.
+
+\textbf{Entscheidung:} Die \texttt{Simulation}-Klasse wurde nicht implementiert.
+Stattdessen übernimmt \texttt{Main.main()} diese Orchestrierung direkt:
+
+\begin{lstlisting}[language=Java, caption={Orchestrierung in \texttt{Main.main()} statt \texttt{Simulation}-Klasse}]
+FahrplanStrategie[] strategien = {
+    new EinfacheFahrtStrategie(),
+    new EinseitigesWartenStrategie(),
+    new BeidseitigesWartenStrategie()
+};
+for (FahrplanStrategie strategie : strategien) {
+    daten.plan().reset();
+    strategie.berechneFahrplan(daten);
+    ausgabeManager.druckeErgebnis(strategie, daten);
+}
+\end{lstlisting}
+
+\textbf{Begründung:} Die Orchestrierungslogik ist für drei feste Strategien trivial
+(eine \texttt{for}-Schleife). Eine eigene Klasse hätte nur Boilerplate erzeugt und die
+Wartbarkeit nicht verbessert. \texttt{Main} verbleibt schlank – alle
+Berechnungslogik liegt in den Strategie-Klassen.
+
+% ── 3.4 EingabeLeser hinzugefügt ────────────────────────────────────────────
+\subsection{Hinzufügen von \texttt{EingabeLeser}}
+
+\textbf{Ursprünglicher Entwurf:} Das Einlesen der Eingabedatei war im ursprünglichen
+Entwurf keiner eigenen Klasse zugeordnet; es war implizit Teil von \texttt{Main}
+oder einer Hilfsklasse.
+
+\textbf{Lösung:} Die Klasse \texttt{EingabeLeser} wurde als separate I/O-Schicht im
+Paket \texttt{de.matse.ihk.io} ergänzt. Sie enthält die statische Methode
+\texttt{leseDatei(String dateiPfad)}, die eine Eingabedatei zeilenweise parst und
+ein \texttt{SimulationsDaten}-Record zurückgibt.
+
+\textbf{Begründung:} Trennung von Eingabe-I/O und Berechnungslogik folgt dem
+\textit{Single Responsibility Principle}. \texttt{Main} bleibt von
+Dateilese-Details unberührt; Änderungen am Dateiformat erfordern nur
+Änderungen in \texttt{EingabeLeser}.
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Aspekt}       & \textbf{Alt}              & \textbf{Neu}                     \\
+\midrule
+I/O-Zuständigkeit     & implizit in \texttt{Main} & \texttt{EingabeLeser.leseDatei()} \\
+Rückgabetyp           & --                        & \texttt{SimulationsDaten} (Record) \\
+Paket                 & --                        & \texttt{de.matse.ihk.io}          \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ── 3.5 Traversierung in FahrplanStrategie ──────────────────────────────────
+\subsection{Traversierung und Wartezeitberechnung in \texttt{FahrplanStrategie}}
+
+\textbf{Ursprünglicher Entwurf:} Die Traversierungslogik (Durchlaufen der
+Knotenkette für Hin- und Rückfahrt, Berechnung der Wartezeiten) war im Datenmodell
+oder einer \texttt{Simulation}-Klasse vorgesehen.
+
+\textbf{Lösung:} Die gesamte Traversierungslogik wurde als \textbf{statische Methoden}
+in der abstrakten Klasse \texttt{FahrplanStrategie} implementiert:
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Methode}                  & \textbf{Beschreibung}                          \\
+\midrule
+\texttt{hinfahrtOhneKollision()}  & Vorwärts-Traversierung, keine Wartezeit        \\
+\texttt{rueckfahrtOhneKollision()} & Rückwärts-Traversierung, keine Wartezeit      \\
+\texttt{hinfahrtMitKollision()}   & Vorwärts mit Wartezeit bei Kollision           \\
+\texttt{rueckfahrtMitKollision()} & Rückwärts mit Wartezeit bei Kollision          \\
+\texttt{beidseitigesWarten()}     & Gleichmäßige Verteilung der Wartezeit Hin+Rück \\
+\texttt{warteZeitHinReset()}      & Setzt alle \texttt{wartezeitHin} auf null zurück \\
+\texttt{warteZeitRueckReset()}    & Setzt alle \texttt{wartezeitRueck} auf null zurück \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Begründung:} Statische Hilfsmethoden in der Basisklasse ermöglichen Code-Reuse
+zwischen allen drei Strategien, ohne den Datenknoten mit Algorithmuslogik zu
+belasten (\textit{Separation of Concerns}). Die konkrete Strategie wählt, welche
+Kombination von Hilfsmethoden sie aufruft.
+
+% ── 3.6 wartezeit → wartezeitHin + wartezeitRueck ───────────────────────────
+\subsection{Umbenennung: \texttt{wartezeit} \textrightarrow{} \texttt{wartezeitHin} + \texttt{wartezeitRueck}}
+
+\textbf{Ursprünglicher Entwurf:} \texttt{BahnhofNode} hatte ein einziges Feld
+\texttt{wartezeit}, das undifferenziert die Wartezeit speicherte.
+
+\textbf{Problem:} Bei beidseitigem Warten müssen Hin- und Rückfahrt-Wartezeiten
+unabhängig voneinander verwaltet werden. Ein einzelnes Feld würde Mehrdeutigkeit
+erzeugen.
+
+\textbf{Lösung:} Das Feld wurde in zwei separate Felder aufgeteilt:
+\begin{itemize}
+  \item \texttt{Integer wartezeitHin} – Wartezeit der Hinfahrt an diesem Knoten
+  \item \texttt{Integer wartezeitRueck} – Wartezeit der Rückfahrt an diesem Knoten
+\end{itemize}
+
+Der ursprüngliche Name ist noch im auskommentierten \texttt{toString()} von
+\texttt{BahnhofNode} als historischer Überrest sichtbar.
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Aspekt}       & \textbf{Alt}                   & \textbf{Neu}                                      \\
+\midrule
+Feld(er)              & \texttt{Integer wartezeit}     & \texttt{Integer wartezeitHin, wartezeitRueck}     \\
+Strafe EinseitigesWarten & $(\sum w)^2$                & $(\sum \mathtt{wartezeitRueck})^2$                \\
+Strafe BeidseitigesWarten & --                         & $(\sum \mathtt{wartezeitHin})^2 + (\sum \mathtt{wartezeitRueck})^2$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ── 3.7 Verbesserte isKollision ──────────────────────────────────────────────
+\subsection{Verbesserung der Kollisionserkennung}
+
+Die ursprüngliche \texttt{Kette.isKollision()} (Abschnitt~3.2) verwendete einfache
+Ungleichungsvergleiche und erkannte keine Kollisionen, wenn Zeitintervalle
+Mitternacht (Minute 59 $\to$ 0) überspannen.
+
+Die neue \texttt{BahnhofNode.isKollision()} iteriert minutengenau alle 60 möglichen
+Zeitpunkte und prüft über \texttt{isTimeInInterval()} mit Modulo-60-Logik, ob ein
+Zug zu diesem Zeitpunkt auf dem Segment ist. Kollision liegt vor, wenn beide Züge
+zur gleichen Minute auf demselben Streckenabschnitt fahren.
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Aspekt}            & \textbf{Alt (\texttt{Kette})}      & \textbf{Neu (\texttt{BahnhofNode})}        \\
+\midrule
+Methode                    & \texttt{Kette.isKollision()}       & \texttt{BahnhofNode.isKollision()}         \\
+Algorithmus                & Zwei Ungleichungen                 & Minutenweise Überlappung (60 Iterationen)  \\
+Wrap-around                & Nicht berücksichtigt               & \texttt{isTimeInInterval()} mit \% 60      \\
+Robustheit Mitternacht     & Fehlerhafte Ergebnisse möglich     & Korrekt für alle Zeitwerte 0–59            \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ── Übersichtstabelle ────────────────────────────────────────────────────────
+\subsection*{Übersicht aller Entwurfsänderungen}
+
+\begin{center}
+\begin{tabular}{clll}
+\toprule
+\textbf{Nr.} & \textbf{Änderung}                     & \textbf{Ursache}                        & \textbf{Auswirkung}             \\
+\midrule
+1 & \texttt{char} $\to$ \texttt{String}          & Stationsanzahl $>$ 26                   & Beliebig lange Namen möglich    \\
+2 & \texttt{Kette} entfernt                       & Zirkuläre Abhängigkeit                  & \texttt{next/prev} in Node      \\
+3 & \texttt{Simulation} nicht implementiert       & Triviale Logik                          & Orchestrierung in \texttt{Main} \\
+4 & \texttt{EingabeLeser} hinzugefügt             & SRP / I/O-Trennung                      & Klare Schichtentrennung         \\
+5 & Traversierung in \texttt{FahrplanStrategie}   & Separation of Concerns                  & Strategien nutzen gemeinsame Helpers \\
+6 & \texttt{wartezeit} $\to$ 2 Felder             & Beidseitiges Warten erfordert Trennung  & Genaue Strafenberechnung        \\
+7 & \texttt{isKollision()} verbessert             & Wrap-around-Fehler                      & Korrekte Mitternachtserkennung  \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ─────────────────────────────────────────
 \section{Einlesen und Initialisieren der Daten}
 
 \subsection{Eingabedateiformat}
