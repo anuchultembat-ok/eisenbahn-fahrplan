@@ -481,38 +481,97 @@ Die Ausgabe markiert diesen Abschnitt mit einem \texttt{x} zwischen B und C.
 % ─────────────────────────────────────────
 \section{Strategie 1: Einfache Fahrt}
 
-\subsection{Beschreibung}
+\subsection{Idee und Zweck}
 
-Die \textbf{Einfache Fahrt} berechnet Hin- und Rückfahrt vollständig ohne Rücksicht auf etwaige Kollisionen. Es wird keine Wartezeit eingebaut. Kollisionen werden lediglich erkannt und in der Ausgabe mit einem \texttt{x} markiert, aber nicht aufgelöst.
+Die \textbf{Einfache Fahrt} ist die einfachste aller drei Strategien: Sie berechnet die schnellstmögliche Hin- und Rückfahrt, als ob die Strecke \emph{zweigleisig} wäre. Kollisionen werden dabei vollständig ignoriert. Die Strategie dient als \textbf{Referenzgrundlage} -- sie liefert die minimale Fahrtdauer ohne jede Wartezeit und zeigt durch die Kollisionsmarkierung (\texttt{x}), wo bei echtem Eingleis-Betrieb Probleme entstünden.
 
-\subsection{Algorithmus}
+Konkret bedeutet das: Die Hinfahrt fährt durch, ohne auf den Rückzug zu warten. Der Rückzug startet unmittelbar nach Ankunft des Hinzuges am Zielbahnhof und fährt ebenfalls durch, ohne auf den Hinzug zu warten. Begegnungen auf freier Strecke werden in dieser Strategie nicht als Problem behandelt.
 
-\textbf{Hinfahrt} (\texttt{hinfahrtOhneKollision}):
+\subsection{Verbale Beschreibung des Algorithmus}
+
+\textbf{Warum +1 Minute Haltezeit?}
+
+An jedem Zwischenbahnhof hält der Zug genau eine Minute (Tür auf, Tür zu). Deshalb gilt: Die Abfahrtszeit an einem Bahnhof ist immer genau eine Minute nach der Ankunftszeit. Nur am letzten Bahnhof gibt es keine Abfahrt mehr.
+
+\textbf{Warum Modulo 60?}
+
+Die Uhr läuft im 60-Minuten-Takt. Nach Minute 59 folgt Minute 0. Die Modulo-60-Rechnung stellt sicher, dass Zeiten immer im Bereich 0--59 bleiben, auch wenn ein Zug über den Stundenwechsel hinausfährt.
+
+\textbf{Hinfahrt -- Schritt für Schritt}:
+
 \begin{enumerate}
-    \item Der erste Bahnhof (Head) erhält \texttt{abfahrthin = startZeit}.
-    \item Für jeden weiteren Bahnhof gilt:
-    \begin{align*}
-        \texttt{ankunfthin}_{i+1} &= (\texttt{abfahrthin}_i + \texttt{distanceToNext}_i) \bmod 60 \\
-        \texttt{abfahrthin}_{i+1} &= (\texttt{ankunfthin}_{i+1} + 1) \bmod 60
-    \end{align*}
-    Der $+1$-Term steht für die obligatorische Haltezeit von einer Minute an jedem Zwischenbahnhof.
+    \item Dem ersten Bahnhof (Head) wird die Startzeit als Abfahrtszeit zugewiesen: \texttt{abfahrthin = startZeit}.
+    \item Für jeden folgenden Bahnhof wird die Ankunftszeit berechnet: Die Fahrtzeit (\texttt{distanceToNext}) des vorherigen Bahnhofs wird zur Abfahrtszeit addiert -- modulo 60. Das Ergebnis ist die \textbf{Ankunftszeit} am nächsten Bahnhof.
+    \item Die \textbf{Abfahrtszeit} des nächsten Bahnhofs ist die Ankunftszeit plus eine Minute Haltezeit.
+    \item Dies wird für jeden Bahnhof wiederholt, bis der letzte Bahnhof (Tail) erreicht ist. Der Tail hat keine Abfahrtszeit (er ist das Ziel).
 \end{enumerate}
 
-\textbf{Rückfahrt} (\texttt{rueckfahrtOhneKollision}):
+\textbf{Rückfahrt -- Schritt für Schritt}:
+
 \begin{enumerate}
-    \item Die Rückfahrt startet, sobald der Hinzug am letzten Bahnhof angekommen ist: $\texttt{startZeitRueck} = (\texttt{ankunfthin}_\text{tail} + 1) \bmod 60$.
-    \item Vom letzten Bahnhof rückwärts wird analog berechnet:
-    \begin{align*}
-        \texttt{ankunftrueck}_{i-1} &= (\texttt{abfahrtrueck}_i + \texttt{distanceToNext}_{i-1}) \bmod 60 \\
-        \texttt{abfahrtrueck}_{i-1} &= (\texttt{ankunftrueck}_{i-1} + 1) \bmod 60
-    \end{align*}
+    \item Der Rückzug startet eine Minute nach Ankunft des Hinzuges am Zielbahnhof: \texttt{startZeitRueck = (ankunfthin(tail) + 1) \% 60}.
+    \item Die Berechnung läuft rückwärts: vom letzten Bahnhof (Tail) zum ersten (Head). Dafür wird die \texttt{prev}-Zeiger-Kette der doppelt verketteten Liste genutzt.
+    \item Für jeden Vorgängerknoten gilt dieselbe Logik wie bei der Hinfahrt: Ankunft = vorherige Abfahrt + Fahrzeit, Abfahrt = Ankunft + 1 Minute.
+    \item Der erste Bahnhof (Head) erhält am Ende nur eine Ankunftszeit, aber keine Abfahrtszeit (er ist das Ziel der Rückfahrt).
 \end{enumerate}
 
-\textbf{Strafe}: Da keine Wartezeiten anfallen, ist die Strafe immer $0$.
+\textbf{Kollisionserkennung in der Ausgabe}:
 
-\subsection{Beispiel: Beispiel2}
+Nach Berechnung beider Fahrten wird für jeden Abschnitt \texttt{isKollision()} aufgerufen. Wenn ein Abschnitt kollisionsbehaftet ist, erscheint ein \texttt{x} in der Ausgabe zwischen den betroffenen Bahnhöfen. Die Kollision wird jedoch \textbf{nicht behoben} -- die Zeitwerte bleiben unverändert.
 
-\begin{beispielbox}[title={Einfache Fahrt -- Beispiel2 (A--B--C--D--E--F--G, Start: 17)}]
+\subsection{Formeln}
+
+\begin{align*}
+    \texttt{ankunfthin}_{i+1} &= (\texttt{abfahrthin}_i + \texttt{distanceToNext}_i) \bmod 60 \\
+    \texttt{abfahrthin}_{i+1} &= (\texttt{ankunfthin}_{i+1} + 1) \bmod 60 \\[6pt]
+    \texttt{startZeitRueck}   &= (\texttt{ankunfthin}_\text{tail} + 1) \bmod 60 \\
+    \texttt{ankunftrueck}_{i-1} &= (\texttt{abfahrtrueck}_i + \texttt{distanceToNext}_{i-1}) \bmod 60 \\
+    \texttt{abfahrtrueck}_{i-1} &= (\texttt{ankunftrueck}_{i-1} + 1) \bmod 60
+\end{align*}
+
+\textbf{Strafe}: Da keine Wartezeiten anfallen, ist die Strafe immer $0$ (auch wenn Kollisionen vorhanden sind).
+
+\subsection{Schrittweise Berechnung am Beispiel2}
+
+\begin{beispielbox}[title={Einfache Fahrt -- Beispiel2: A--B--C--D--E--F--G, Abstände: 5 8 6 7 3 2, Start: 17}]
+
+\textbf{Hinfahrt} -- Berechnung Knoten für Knoten:
+
+\begin{center}
+\begin{tabular}{c|c|c|p{7cm}}
+\toprule
+\textbf{Knoten} & \textbf{An} & \textbf{Ab} & \textbf{Berechnung} \\
+\midrule
+A & -- & 17 & Startzeit direkt gesetzt \\
+B & $(17+5)\bmod60 = 22$ & $22+1 = 23$ & Abstand A$\to$B = 5 \\
+C & $(23+8)\bmod60 = 31$ & $31+1 = 32$ & Abstand B$\to$C = 8 \\
+D & $(32+6)\bmod60 = 38$ & $38+1 = 39$ & Abstand C$\to$D = 6 \\
+E & $(39+7)\bmod60 = 46$ & $46+1 = 47$ & Abstand D$\to$E = 7 \\
+F & $(47+3)\bmod60 = 50$ & $50+1 = 51$ & Abstand E$\to$F = 3 \\
+G & $(51+2)\bmod60 = 53$ & -- & Ziel, keine Abfahrt \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Rückfahrt} -- Startzeit: $(53+1)\bmod60 = 54$, Berechnung rückwärts:
+
+\begin{center}
+\begin{tabular}{c|c|c|p{7cm}}
+\toprule
+\textbf{Knoten} & \textbf{Ab} & \textbf{An} & \textbf{Berechnung} \\
+\midrule
+G & 54 & -- & Startzeit direkt gesetzt \\
+F & $56+1 = 57$ & $(54+2)\bmod60 = 56$ & Abstand F$\to$G = 2 \\
+E & $0+1 = 1$ & $(57+3)\bmod60 = 0$ & Abstand E$\to$F = 3 \\
+D & $8+1 = 9$ & $(1+7)\bmod60 = 8$ & Abstand D$\to$E = 7 \\
+C & $15+1 = 16$ & $(9+6)\bmod60 = 15$ & Abstand C$\to$D = 6 \\
+B & $24+1 = 25$ & $(16+8)\bmod60 = 24$ & Abstand B$\to$C = 8 \\
+A & -- & $(25+5)\bmod60 = 30$ & Ziel, keine Abfahrt \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Ergebnis}:
 \begin{center}
 \begin{tabular}{r|ccccccc}
  & A & B & C & D & E & F & G \\
@@ -528,65 +587,153 @@ Wa Rück &    &    &    &    &    &    &    \\
 An Rück & 30 & 24 & 15 & 08 & 00 & 56 &    \\
 \end{tabular}
 \end{center}
-Gesamtdauer Hin/Rück: 36 / 36 \quad Wartezeit: 0 / 0 \quad Strafe: 0
 
-Das \textbf{x} bei B zeigt die Kollision auf dem Abschnitt B$\to$C an.
+Gesamtdauer Hin/Rück: 36 / 36 \quad Wartezeit: 0 / 0 \quad Strafe: 0 \\[4pt]
+Das \textbf{x} bei B zeigt: Auf dem Abschnitt B$\to$C kollidierten die Züge. Dies bleibt unbehandelt.
 \end{beispielbox}
 
 \begin{hinweisbox}
-Die Hinfahrtdaten (\texttt{ankunfthin}, \texttt{abfahrthin}), die \texttt{EinfacheFahrtStrategie} hier in die Knoten schreibt, werden von den Strategien~2 und~3 \emph{unverändert weitergenutzt} (siehe Abschnitt~\ref{sec:referenz}). Die Strategien schreiben diese Werte \emph{nicht} neu.
+Die Hinfahrtdaten (\texttt{ankunfthin}, \texttt{abfahrthin}), die \texttt{EinfacheFahrtStrategie} in die Knoten schreibt, werden von den Strategien~2 und~3 \emph{unverändert weitergenutzt} (siehe Abschnitt~\ref{sec:referenz}). Die Strategien berechnen die Hinfahrt \emph{nicht} neu.
 \end{hinweisbox}
 
 % ─────────────────────────────────────────
 \section{Strategie 2: Einseitiges Warten}
 
-\subsection{Beschreibung}
+\subsection{Idee und Zweck}
 
-Beim \textbf{Einseitigen Warten} bleibt die Hinfahrt unverändert (identisch zur Einfachen Fahrt). Der \textbf{Rückzug} hält jedoch an Bahnhöfen, wo eine Kollision droht, und wartet so lange, bis der Hinzug den betreffenden Abschnitt freigegeben hat.
+Beim \textbf{Einseitigen Warten} löst das Programm Kollisionen auf, indem es den \textbf{Rückzug an bestimmten Bahnhöfen warten lässt}. Der Hinzug fährt unverändert durch (identisch zur Einfachen Fahrt). Der Rückzug muss an einer Kollisionsstelle so lange warten, bis der Hinzug den gemeinsamen Streckenabschnitt vollständig verlassen hat -- erst dann darf der Rückzug in diesen Abschnitt einfahren.
 
-\subsection{Algorithmus}
+Dieses Verfahren garantiert, dass \textbf{keine Kollision mehr entsteht}. Der Nachteil: Der Rückzug trägt die gesamte Verzögerung allein. Je länger er wartet, desto größer ist die quadratische Strafe.
 
-Die Methode \texttt{rueckfahrtMitKollision()} arbeitet in zwei Phasen:
+\subsection{Verbale Beschreibung des Algorithmus}
 
-\textbf{Phase 1}: Berechnung der Rückfahrt \emph{ohne} Kollisionsbehandlung (wie bei der Einfachen Fahrt), um eine Ausgangsbasis zu haben.
+Die Methode \texttt{rueckfahrtMitKollision()} arbeitet in \textbf{zwei Phasen}:
 
-\textbf{Phase 2}: Traversierung von \texttt{tail.prev} bis \texttt{head} (also von hinten nach vorne), wobei an jedem Knoten $i$ überprüft wird, ob der Vorgänger-Abschnitt ($i-1 \to i$) eine Kollision hat. Wenn ja, muss der Rückzug bei Knoten $i$ warten:
+\textbf{Phase 1 -- Ausgangsbasis ohne Kollision}:
 
-\begin{align*}
-    \texttt{wartezeitRueck}_i &= (\texttt{ankunfthin}_i - \texttt{ankunftrueck}_i + 60) \bmod 60
-\end{align*}
+Zunächst wird die Rückfahrt exakt wie bei der Einfachen Fahrt berechnet (Methode \texttt{rueckfahrtOhneKollision()}). Das Ergebnis ist noch nicht kollisionsfrei, dient aber als Startpunkt für die Kollisionskorrektur in Phase 2.
 
-Diese Formel berechnet, wie lange der Rückzug bei Knoten $i$ warten muss, damit er frühestens dann abfährt, wenn der Hinzug den Abschnitt verlassen hat. Die $+60$ und $\bmod 60$ behandeln den Fall, dass die Zeiten über den Stundenwechsel gehen.
+\textbf{Phase 2 -- Rückwärtige Traversierung mit Kollisionskorrektur}:
 
-Die Abfahrtszeit wird dann entsprechend nach hinten verschoben:
-\begin{align*}
-    \texttt{abfahrtrueck}_i &= (\texttt{ankunftrueck}_i + \texttt{wartezeitRueck}_i + 1) \bmod 60
-\end{align*}
+Der Algorithmus läuft vom vorletzten Bahnhof (tail.prev) rückwärts bis zum zweiten Bahnhof (head.next). Für jeden Knoten $i$ in dieser Reihenfolge werden folgende Schritte ausgeführt:
+
+\begin{enumerate}
+    \item \textbf{Zeiten neu berechnen}: Da ein vorheriger Schritt möglicherweise Wartezeiten eingebaut hat, die alle nachfolgenden Abfahrtszeiten verschieben, werden die Ankunfts- und Abfahrtszeiten des aktuellen Knotens aus der bereits berechneten Abfahrtszeit des \emph{nächsten} Knotens neu abgeleitet.
+    \item \textbf{Kollision am Vorgänger prüfen}: Es wird geprüft, ob der \emph{Vorgänger-Knoten} ($i-1$) auf seinem Abschnitt nach $i$ eine Kollision hat. Der Vorgänger wird geprüft, weil der Rückzug dort in den gefährdeten Abschnitt \emph{einfährt} -- dort muss er warten.
+    \item \textbf{Wartezeit berechnen}: Wenn eine Kollision erkannt wurde, wird die nötige Wartezeit des Rückzuges bei Knoten $i$ berechnet. Der Rückzug muss mindestens so lange warten, bis der Hinzug bei Knoten $i$ ankommt -- denn erst dann hat der Hinzug den Abschnitt zwischen $i-1$ und $i$ verlassen.
+
+    Die Wartezeit ergibt sich als Differenz zwischen der Ankunftszeit des Hinzuges und der Ankunftszeit des Rückzuges an Knoten $i$ (plus Modulo-60-Korrektur für den Stundenwechsel):
+    \begin{align*}
+        \texttt{wartezeitRueck}_i = (\texttt{ankunfthin}_i - \texttt{ankunftrueck}_i + 60) \bmod 60
+    \end{align*}
+
+    \item \textbf{Abfahrtszeit anpassen}: Die Abfahrtszeit des Rückzuges bei Knoten $i$ wird nach hinten verschoben:
+    \begin{align*}
+        \texttt{abfahrtrueck}_i = (\texttt{ankunftrueck}_i + \texttt{wartezeitRueck}_i + 1) \bmod 60
+    \end{align*}
+    Der $+1$-Term ist wiederum die Haltezeit.
+\end{enumerate}
+
+\textbf{Warum rückwärts und nicht vorwärts?}
+
+Der Algorithmus läuft vom letzten Bahnhof in Richtung erster Bahnhof, weil der Rückzug ebenfalls in dieser Richtung fährt. Wenn bei Bahnhof $i$ eine Wartezeit eingefügt wird, verschiebt sich die Abfahrtszeit dort nach hinten -- das wirkt sich auf alle \emph{vorher} besuchten Bahnhöfe (also weiter vorne in der Strecke) aus. Indem wir rückwärts (in Fahrtrichtung des Rückzuges vorwärts) laufen, werden diese Kaskaden korrekt aufgefangen.
+
+\textbf{Warum wird der Vorgänger-Knoten auf Kollision geprüft, nicht der aktuelle?}
+
+\texttt{isKollision()} ist am Knoten definiert und prüft den Abschnitt \emph{zwischen diesem Knoten und seinem Nachfolger} (in Richtung der Hinfahrt). Der Rückzug fährt auf diesem Abschnitt von $i$ nach $i-1$ -- also von rechts nach links in der Liste. Der für den Rückzug gefährliche Abschnitt zwischen $i-1$ und $i$ wird durch \texttt{isKollision()} am Knoten $i-1$ geprüft: \texttt{current.getPrev().isKollision()}.
 
 \textbf{Strafe}:
 \begin{align*}
     \text{Strafe} = \left(\sum_i \texttt{wartezeitRueck}_i\right)^2
 \end{align*}
 
-\subsection{Konkretes Beispiel: Beispiel2}
+\subsection{Lückenlose Schritt-für-Schritt-Berechnung: Beispiel2}
 
-\begin{beispielbox}[title={Einseitiges Warten -- Beispiel2 (A--B--C--D--E--F--G, Start: 17)}]
+\begin{beispielbox}[title={Einseitiges Warten -- Beispiel2: A--B--C--D--E--F--G, Abstände: 5 8 6 7 3 2, Start: 17}]
 
-\textbf{Phase 1} (Rückfahrt ohne Kollision, Startzeit G = 54):
-Der Rückzug fährt zunächst planmäßig: G:54, F:57/56, E:01/00, D:09/08, C:16/15, B:25/24, A:30.
+Die Hinfahrt ist identisch zur Einfachen Fahrt und bereits in die Knoten geschrieben (von Strategie~1):
 
-\textbf{Kollisionsprüfung} bei Abschnitt B$\to$C (Knoten B):
-\begin{align*}
-\text{Hinzug B}\to\text{C:} &\quad [23, 31] \\
-\text{Rückzug C}\to\text{B:} &\quad [16, 24] \quad\Rightarrow\quad \textbf{KOLLISION!}
-\end{align*}
+\begin{center}
+\begin{tabular}{r|ccccccc}
+ & A & B & C & D & E & F & G \\
+\hline
+An Hin & -- & 22 & 31 & 38 & 46 & 50 & 53 \\
+Ab Hin & 17 & 23 & 32 & 39 & 47 & 51 & -- \\
+\end{tabular}
+\end{center}
 
-\textbf{Wartezeit} bei C:
-\begin{align*}
-\texttt{wartezeitRueck}(C) &= (31 - 15 + 60) \bmod 60 = 16 \text{ Minuten}
-\end{align*}
+\textbf{Phase 1} -- Rückfahrt ohne Kollision (Startzeit G = $(53+1)\bmod60 = 54$):
 
-Der Rückzug wartet 16 Minuten bei C und fährt erst um Minute 32 ab. Die nachfolgenden Knoten (B, A) werden neu berechnet.
+\begin{center}
+\begin{tabular}{c|cc|p{7cm}}
+\toprule
+\textbf{Knoten} & \textbf{Ab Rück} & \textbf{An Rück} & \textbf{Berechnung} \\
+\midrule
+G & 54 & -- & Startzeit \\
+F & 57 & $(54+2)=56$ & Abstand F$\to$G = 2 \\
+E & 1 & $(57+3)\bmod60=0$ & Abstand E$\to$F = 3 \\
+D & 9 & $(1+7)=8$ & Abstand D$\to$E = 7 \\
+C & 16 & $(9+6)=15$ & Abstand C$\to$D = 6 \\
+B & 25 & $(16+8)=24$ & Abstand B$\to$C = 8 \\
+A & -- & $(25+5)=30$ & Ziel der Rückfahrt \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Phase 2} -- Rückwärtstraversierung, \texttt{current} startet bei F:
+
+\medskip
+\textit{Iteration 1: current = F}
+
+\begin{itemize}
+    \item Zeiten neu: F.An=$(G.Ab+2)\bmod60=(54+2)=56$, F.Ab=$57$
+    \item Vorausschau: E.An=$(57+3)=0$
+    \item Kollision bei E? (Abschnitt E$\to$F): Hin$[47,50]$, Rück$[57,0]$ $\to$ kein Überlapp $\Rightarrow$ keine Kollision
+    \item F.wartezeitRueck = 0, F.Ab bleibt 57
+\end{itemize}
+
+\textit{Iteration 2: current = E}
+
+\begin{itemize}
+    \item Zeiten neu: E.An=$(57+3)=0$, E.Ab=$1$
+    \item Vorausschau: D.An=$(1+7)=8$
+    \item Kollision bei D? (Abschnitt D$\to$E): Hin$[39,46]$, Rück$[1,8]$ $\to$ kein Überlapp $\Rightarrow$ keine Kollision
+    \item E.wartezeitRueck = 0
+\end{itemize}
+
+\textit{Iteration 3: current = D}
+
+\begin{itemize}
+    \item Zeiten neu: D.An=$(1+7)=8$, D.Ab=$9$
+    \item Vorausschau: C.An=$(9+6)=15$
+    \item Kollision bei C? (Abschnitt C$\to$D): Hin$[32,38]$, Rück$[9,15]$ $\to$ kein Überlapp $\Rightarrow$ keine Kollision
+    \item D.wartezeitRueck = 0
+\end{itemize}
+
+\textit{Iteration 4: current = C}
+
+\begin{itemize}
+    \item Zeiten neu: C.An=$(9+6)=15$, C.Ab=$16$
+    \item Vorausschau: B.An=$(16+8)=24$
+    \item Kollision bei B? (Abschnitt B$\to$C): Hin$[23,31]$, Rück$[16,24]$
+
+    $\to$ $t=23$: in $[23,31]$? Ja. In $[16,24]$? Ja. \textbf{KOLLISION!}
+    \item Wartezeit: $\texttt{wartezeitRueck}(C) = (31 - 15 + 60)\bmod60 = 76\bmod60 = 16$ Minuten
+
+    \textit{Erklärung}: Der Hinzug kommt bei C um Min.~31 an. Der Rückzug kommt schon um Min.~15 an. Er muss $31-15=16$ Minuten warten, bis der Hinzug an C vorbei ist.
+    \item C.Ab $= (15 + 16 + 1)\bmod60 = 32$
+\end{itemize}
+
+\textit{Iteration 5: current = B}
+
+\begin{itemize}
+    \item Zeiten neu: B.An=$(C.Ab+8)=(32+8)=40$, B.Ab=$41$
+    \item Vorausschau: A.An=$(41+5)=46$
+    \item Kollision bei A? (Abschnitt A$\to$B): Hin$[17,22]$, Rück$[41,46]$ $\to$ kein Überlapp $\Rightarrow$ keine Kollision
+    \item B.wartezeitRueck = 0
+\end{itemize}
+
+\textit{Nach der Schleife}: A.An $= (41+5)\bmod60 = 46$
 
 \textbf{Endergebnis}:
 \begin{center}
@@ -600,74 +747,108 @@ Ab Hin  & 17 & 23 & 32 & 39 & 47 & 51 &    \\
 Bahnhof & A  & B  & C  & D  & E  & F  & G  \\
 \hline
 Ab Rück &    & 41 & 32 & 09 & 01 & 57 & 54 \\
-Wa Rück &    &    & 16 &    &    &    &    \\
+Wa Rück &    &    & \textbf{16} &    &    &    &    \\
 An Rück & 46 & 40 & 15 & 08 & 00 & 56 &    \\
 \end{tabular}
 \end{center}
 
 Gesamtdauer Hin/Rück: 36 / 52 \quad Wartezeit: 0 / 16 \quad Strafe: $16^2 = \mathbf{256}$
+
+Der Rückzug wartet 16 Minuten bei C, bis der Hinzug C passiert hat (Min.~31). Danach kann er ungehindert von C nach B nach A fahren.
 \end{beispielbox}
 
 % ─────────────────────────────────────────
 \section{Strategie 3: Beidseitiges Warten}
 
-\subsection{Beschreibung}
+\subsection{Idee und Zweck}
 
-Das \textbf{Beidseitige Warten} versucht, die anfallende Wartezeit gleichmäßig auf Hin- und Rückzug zu verteilen, um die Gesamtstrafe zu minimieren. Da die Strafe quadratisch berechnet wird, ist eine gleichmäßige Aufteilung mathematisch besser als das einseitige Warten des gesamten Betrags auf einem Zug.
+Das \textbf{Beidseitige Warten} ist die intelligenteste der drei Strategien. Sie behebt Kollisionen, indem sie die entstehende Wartezeit \textbf{möglichst gleichmäßig auf Hin- und Rückzug aufteilt}.
 
-Die Strategie arbeitet in zwei Schritten:
+Der Grundgedanke: Wenn zwei Züge auf einer Strecke aufeinandertreffen, müssen zusammen $W$ Minuten Wartezeit erzeugt werden. Statt den gesamten Betrag einem Zug aufzubürden (wie beim Einseitigen Warten), lässt man jeden Zug die Hälfte warten. Das klingt fair -- aber es ist auch \textbf{mathematisch optimal}, weil die Strafe quadratisch berechnet wird:
 
-\begin{enumerate}
-    \item \textbf{Optimale Startzeitsuche}: Es werden alle 60 möglichen Abfahrtszeiten der Rückfahrt ausprobiert. Für jede Startzeit wird der Fahrplan mit \texttt{rueckfahrtMitKollision()} berechnet und die Strafe ermittelt. Die Startzeit mit der niedrigsten Strafe wird gewählt.
-    \item \textbf{Beidseitige Warteverteilung}: Wenn nach Schritt 1 noch Kollisionen bestehen, wird die verbleibende Wartezeit via \texttt{beidseitigesWarten()} hälftig auf Hin- und Rückzug verteilt.
-\end{enumerate}
+\begin{align*}
+\text{Einseitiges Warten:} & \quad (W)^2 \\
+\text{Beidseitiges Warten:} & \quad \left(\frac{W}{2}\right)^2 + \left(\frac{W}{2}\right)^2 = \frac{W^2}{4} + \frac{W^2}{4} = \frac{W^2}{2}
+\end{align*}
 
-\subsection{Algorithmus}
+Das Beidseitige Warten erzielt also \textbf{immer mindestens die halbe Strafe} des Einseitigen Wartens.
 
-\textbf{Schritt 1 -- Optimale Startzeitsuche}:
+Noch besser: Häufig findet die Strategie eine Startzeit für den Rückzug, bei der \emph{gar keine} Wartezeit nötig ist -- dann ist die Strafe 0.
 
-\begin{lstlisting}[caption={Suche nach der besten Rückfahrt-Startzeit}]
-for (int i = 0; i < 60; i++) {
-    rueckfahrtMitKollision(aktuellerPlan, i);
-    if (aktuellerPlan.getTail().getPrev().isKollision()) continue;
-    int strafe = getSummeStrafen();
-    if (strafe < besteStrafe) {
-        besteStrafe = strafe;
-        besteStartzeitRueck = i;
-    }
-}
-\end{lstlisting}
+\subsection{Verbale Beschreibung des Algorithmus}
 
-Wenn eine Startzeit dazu führt, dass der vorletzte Bahnhof noch eine Kollision hat, wird diese Startzeit übersprungen.
+Die Strategie arbeitet in \textbf{zwei Schritten}:
 
-\textbf{Schritt 2 -- Hälftige Aufteilung} (\texttt{beidseitigesWarten()}):
+\subsubsection{Schritt 1: Optimale Rückfahrt-Startzeit suchen}
 
-Für jeden Bahnhof mit \texttt{wartezeitRueck > 0} wird die Wartezeit geteilt:
+Der Algorithmus probiert \textbf{alle 60 möglichen Startzeiten} (Minute 0 bis 59) für die Rückfahrt durch. Für jede Startzeit wird mit \texttt{rueckfahrtMitKollision()} berechnet, wie die Rückfahrt aussähe (inklusive einseitigem Warten, wo nötig). Die Startzeit, die die \textbf{geringste Strafe} liefert, wird als beste Startzeit gespeichert.
+
+Eine Startzeit wird übersprungen (\texttt{continue}), wenn der vorletzte Bahnhof (direkt neben dem Endbahnhof) noch eine Kollision hat. Das ist ein Sonderfall, bei dem der Algorithmus nicht sauber abschließen kann.
+
+\textbf{Warum alle 60 ausprobieren?} Weil es keine einfache Formel gibt, die direkt die optimale Startzeit berechnet. Die Streckenabstände und Kollisionssituationen sind zu vielfältig. Der Brute-Force-Ansatz ist jedoch sehr effizient: 60 Iterationen $\times$ Anzahl der Knoten -- das läuft in Millisekunden.
+
+\subsubsection{Schritt 2: Wartezeit hälftig aufteilen (falls noch nötig)}
+
+Wenn die beste gefundene Startzeit noch Restkollisionen enthält (d.\,h. der Rückzug musste trotz optimaler Startzeit noch warten), wird die verbleibende Wartezeit hälftig aufgeteilt:
+
+\begin{itemize}
+    \item Für jeden Bahnhof mit \texttt{wartezeitRueck > 0} wird die Hälfte dieser Wartezeit dem \textbf{Hinzug} zugewiesen (\texttt{wartezeitHin}).
+    \item Die andere Hälfte bleibt beim Rückzug (\texttt{wartezeitRueck}).
+    \item Bei ungerader Wartezeit (z.\,B. 7 Min.) bekommt die Hinfahrt 3 Min. und die Rückfahrt 4 Min. -- die Rückfahrt trägt eine Minute mehr.
+\end{itemize}
+
+\textbf{Was bedeutet Wartezeit für den Hinzug?}
+
+Wenn der Hinzug an Bahnhof $i$ wartet, fährt er erst später ab. Das verschiebt alle nachfolgenden Ankünfte des Hinzuges nach hinten -- und damit auch den Zeitpunkt, ab dem der Rückzug ohne Kollision einfahren kann. Die Hinfahrt muss deshalb nach der Aufteilung mit \texttt{hinfahrtMitKollision()} neu berechnet werden.
+
+Anschließend wird auch die Rückfahrt mit der angepassten (um die hinzugekommene Hinverzögerung verschobenen) Startzeit neu berechnet.
+
+\subsection{Formeln}
+
+\textbf{Aufteilung der Wartezeit}:
 \begin{align*}
 \texttt{wartezeitHin}_i &= \left\lfloor \texttt{wartezeitRueck}_i \,/\, 2 \right\rfloor \\
 \texttt{wartezeitRueck}_i &= \texttt{wartezeitRueck}_i - \texttt{wartezeitHin}_i
 \end{align*}
-
-(Bei ungeraden Wartezeiten bekommt die Rückfahrt eine Minute mehr.)
 
 \textbf{Strafe}:
 \begin{align*}
     \text{Strafe} = \left(\sum_i \texttt{wartezeitHin}_i\right)^2 + \left(\sum_i \texttt{wartezeitRueck}_i\right)^2
 \end{align*}
 
-\subsection{Beispiel: Beispiel2}
+\subsection{Lückenlose Berechnung: Beispiel2 (einfacher Fall -- keine Wartezeit nötig)}
 
-\begin{beispielbox}[title={Beidseitiges Warten -- Beispiel2 (A--B--C--D--E--F--G, Start: 17)}]
+\begin{beispielbox}[title={Beidseitiges Warten -- Beispiel2: A--B--C--D--E--F--G, Abstände: 5 8 6 7 3 2, Start: 17}]
 
-\textbf{Suche der besten Startzeit}:
-Bei Startzeit $= 10$ entsteht keine Kollision auf dem Abschnitt B$\to$C:
+\textbf{Schritt 1: Suche der besten Startzeit}
 
-\begin{align*}
-\text{Hinzug B}\to\text{C:} &\quad [23, 31] \\
-\text{Rückzug C}\to\text{B (Start 10):} &\quad [41, 49]
-\end{align*}
+Der Algorithmus probiert alle 60 Startzeiten. Relevant ist die Kollision auf dem Abschnitt B$\to$C. Die Hinfahrt belegt diesen Abschnitt im Intervall $[23, 31]$.
 
-$[23,31]$ und $[41,49]$ schneiden sich \textbf{nicht} $\Rightarrow$ keine Kollision, Strafe $= 0$.
+Damit der Rückzug diesen Abschnitt \emph{nicht gleichzeitig} nutzt, muss das Rückfahrtintervall auf C$\to$B entweder \textbf{vor Minute 23} oder \textbf{nach Minute 31} liegen. Bei Startzeit G = 10:
+
+\begin{center}
+\begin{tabular}{c|cc|p{6cm}}
+\toprule
+\textbf{Knoten} & \textbf{Ab Rück} & \textbf{An Rück} & \textbf{Berechnung} \\
+\midrule
+G & 10 & -- & Startzeit \\
+F & 13 & $(10+2)=12$ & \\
+E & 17 & $(13+3)=16$ & \\
+D & 25 & $(17+7)=24$ & \\
+C & 32 & $(25+6)=31$ & Abschnitt C$\to$B: Rück fährt ab 32 \\
+B & 41 & $(32+8)=40$ & Rück-Intervall C$\to$B: $[32, 40]$ \\
+A & -- & $(41+5)=46$ & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Kollisionsprüfung B$\to$C: Hin $[23,31]$, Rück $[32, 40]$ -- \textbf{kein Überlapp} $\Rightarrow$ keine Kollision! Strafe = 0.
+
+Da 0 die minimale mögliche Strafe ist, wird \texttt{besteStartzeitRueck = 10} gespeichert.
+
+\textbf{Schritt 2: Warteverteilung}
+
+Da alle \texttt{wartezeitRueck = 0} sind, ändert \texttt{beidseitigesWarten()} nichts.
 
 \textbf{Endergebnis}:
 \begin{center}
@@ -687,6 +868,47 @@ An Rück & 46 & 40 & 31 & 24 & 16 & 12 &    \\
 \end{center}
 
 Gesamtdauer Hin/Rück: 36 / 36 \quad Wartezeit: 0 / 0 \quad Strafe: $\mathbf{0}$
+\end{beispielbox}
+
+\subsection{Berechnung: Beispiel3 (Fall mit Wartezeit-Aufteilung)}
+
+\begin{beispielbox}[title={Beidseitiges Warten -- Beispiel3: A--B--C--D--E--F--G--H--I--J, Start: 17}]
+
+Beispiel3 hat zwei Kollisionsstellen (A und D). Die Suchschleife findet eine optimale Startzeit, bei der noch Restkollisionen verbleiben, die dann hälftig aufgeteilt werden.
+
+Tatsächliche Ausgabe des Programms:
+\begin{center}
+\begin{tabular}{r|cccccccccc}
+ & A & B & C & D & E & F & G & H & I & J \\
+\hline
+An Hin  &   & 29 & 38 & 53 & 57 & 03 & 25 & 39 & 46 & 55 \\
+Wa Hin  & 02 &    &    & 03 &    &    &    &    &    &   \\
+Ab Hin  & 17 & 30 & 39 & 54 & 01 & 08 & 30 & 44 & 51 & 00 \\
+\hline
+Bahn.   & A  & B  & C  & D  & E  & F  & G  & H  & I  & J \\
+\hline
+Ab Rück &    & 30 & 19 & 04 & 00 & 52 & 30 & 16 & 09 & 60 \\
+Wa Rück & 02 &    &    & 02 &    &    &    &    &    &   \\
+An Rück & 42 & 27 & 18 & 03 & 57 & 51 & 29 & 15 & 08 &   \\
+\end{tabular}
+\end{center}
+
+Gesamtdauer Hin/Rück: 102 / 102 \quad Wartezeit: 4 / 4 \quad Strafe: $4^2 + 4^2 = \mathbf{32}$
+
+\textbf{Aufteilung im Vergleich}:
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+ & \textbf{Wartezeit Hin} & \textbf{Wartezeit Rück} & \textbf{Strafe} \\
+\midrule
+Einseitiges Warten & 0 & 8 & $8^2 = 64$ \\
+Beidseitiges Warten & 4 & 4 & $4^2 + 4^2 = 32$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Die Gesamtwartezeit ist in beiden Fällen 8 Minuten. Durch die gleichmäßige Aufteilung halbiert sich die Strafe von 64 auf 32 -- exakt wie die Theorie vorhersagt: $\frac{W^2}{2} = \frac{64}{2} = 32$.
 \end{beispielbox}
 
 \subsection{Vergleich der drei Strategien an Beispiel2}
