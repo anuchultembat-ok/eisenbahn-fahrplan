@@ -3873,6 +3873,98 @@ werden still ignoriert (kein Exception-Wurf bei leeren Zeilen).
 normalisiert. Der Wert wird direkt von \texttt{Integer.parseInt()} übernommen.
 
 % ─────────────────────────────────────────
+\section{Konkrete Erweiterungsvorschläge}
+\label{sec:erweiterungen}
+
+Zwei Anforderungen wurden bewusst mit fest einprogrammierten Konstanten
+umgesetzt, sollen aber laut MATSE später ohne großen Aufwand anpassbar sein.
+Dieser Abschnitt beschreibt, \emph{wo} der Wert heute steckt,
+\emph{warum} eine Konstante die richtige Lösung ist und
+\emph{wie} die Erweiterung konkret aussehen würde.
+
+% ──────────────────────────────────────────────────────────────────
+\subsection{Konfigurierbare Haltezeit an Bahnhöfen}
+
+\textbf{Anforderung:}
+An jedem Zwischenbahnhof müssen Fahrgäste ein- und aussteigen können.
+Dafür ist eine feste Haltezeit vorgesehen.
+Der MATSE setzt diese aktuell auf \textbf{1 Minute}, behält sich aber vor,
+den Wert später anzupassen.
+
+\textbf{Aktueller Stand:}
+Die Haltezeit ist in der Methode \texttt{berechneMindestdauer()} in
+\texttt{AusgabeManager} als Zahl \texttt{1} hart einprogrammiert
+(Formel: $\sum d_i + (n-2) \cdot 1$).
+Ebenso addiert jede Strategiemethode beim Aufbau der Hinfahrt fix
+\texttt{+\,1} auf die Abfahrtszeit jedes Zwischenknotens.
+
+\textbf{Erweiterung:}
+Die Haltezeit wird als benannte Konstante an einer einzigen Stelle
+definiert, zum Beispiel in \texttt{FahrplanStrategie}:
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Element} & \textbf{Beschreibung} \\
+\midrule
+\texttt{HALTEZEIT = 1} & Zentrale Konstante, einmalig zu ändern \\
+Strategiemethoden & Ersetzen \texttt{+1} durch \texttt{+HALTEZEIT} \\
+\texttt{berechneMindestdauer()} & Ersetzt \texttt{(n-2)} durch \texttt{(n-2)*HALTEZEIT} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Wird die Konstante z.\,B. auf 2 gesetzt, verlängern sich Gesamtdauer und
+Kollisionsintervalle automatisch für alle drei Strategien, ohne einen
+einzigen Algorithmus anfassen zu müssen.
+
+% ──────────────────────────────────────────────────────────────────
+\subsection{Konfigurierbare Sicherheitswartezeit bei Zugbegegnungen}
+
+\textbf{Anforderung:}
+Wenn ein Zug in einem Bahnhof ankommt, darf der dort wartende Gegenzug
+erst nach einer vorgeschriebenen \textbf{Sicherheitswartezeit} abfahren.
+
+\textbf{Beispiel:} Zug (Hinfahrt) kommt in Bahnhof~C um Minute~23 an.
+Der Gegenzug (Rückfahrt) steht in~C und darf frühestens um Minute~24 abfahren —
+also erst nach 1\,Minute Sicherheitsabstand.
+
+\textbf{Aktueller Stand:}
+Die Sicherheitswartezeit steckt implizit als Zahl \texttt{1} in der
+Kollisionserkennungs- und Wartelogik:
+\begin{itemize}
+  \item In \texttt{rueckfahrtMitKollision()} wird die Rückfahrt-Startzeit
+    als \texttt{(ankunftHin + 1) \% 60} berechnet — das „+1" ist die
+    Sicherheitswartezeit.
+  \item In \texttt{BeidseitigesWartenStrategie} wird die Korrekturwartezeit
+    ebenfalls auf Basis dieses +1 ermittelt.
+\end{itemize}
+
+\textbf{Erweiterung:}
+Wie bei der Haltezeit wird eine benannte Konstante eingeführt:
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Element} & \textbf{Beschreibung} \\
+\midrule
+\texttt{SICHERHEITSZEIT = 1} & Zentrale Konstante, einmalig zu ändern \\
+\texttt{rueckfahrtMitKollision()} & Ersetzt \texttt{+1} durch \texttt{+SICHERHEITSZEIT} \\
+\texttt{BeidseitigesWartenStrategie} & Passt Schleife und Warteberechnung an \\
+\texttt{EingabeValidator} & Prüfgrenze V6 wird zu $2d + \text{SICHERHEITSZEIT} < 60$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Wichtiger Zusammenhang mit Regel V6:}
+Die Obergrenze für gültige Streckenabstände ($d \leq 29$) basiert auf
+$2d + 1 < 60$, wobei die 1 die Sicherheitswartezeit ist.
+Bei \texttt{SICHERHEITSZEIT = 2} verschärft sich die Grenze zu
+$2d + 2 < 60 \Rightarrow d \leq 28$ — der Validator muss synchron
+angepasst werden.
+Beide Konstanten an einer zentralen Stelle zu halten stellt sicher,
+dass diese Abhängigkeit nicht vergessen werden kann.
+
 \section{Zusammenfassung und Ausblick}
 \label{sec:zusammenfassung}
 
