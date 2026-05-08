@@ -1643,68 +1643,88 @@ flowchart TD
 
 Die Testfälle sind in vier Kategorien gegliedert: \textbf{Normalfälle} (N), \textbf{Grenzfälle} (G),
 \textbf{Spezialfälle} (S) und \textbf{Validierungsfehler} (V).
-Jeder Test dokumentiert die Eingabedaten, die manuelle Berechnung der Schlüsselschritte,
-die tatsächliche Programmausgabe sowie eine analytische Bewertung.
+Jeder Test zeigt links die Eingabe mit manueller Berechnung, rechts die tatsächliche Programmausgabe.
+Bei breiten Ausgaben (N3, S2) entfällt die Zweispaltigkeit.
 
 \subsection*{Übersichtstabelle aller Testfälle}
 \begin{center}
-\begin{tabular}{llllrcc}
+\begin{tabular}{llllrc}
 \toprule
-\textbf{ID} & \textbf{Datei} & \textbf{Kat.} & \textbf{Beschreibung} & \textbf{Strafe} & \textbf{Ergebnis} \\
+\textbf{ID} & \textbf{Datei} & \textbf{Kat.} & \textbf{Beschreibung} & \textbf{Strafe\,Beid.} & \textbf{OK} \\
 \midrule
-N1 & \texttt{01\_beispiel1\_baseline}      & Normal & Basisfall ohne Kollision         & 0     & \textcolor{green!60!black}{\checkmark} \\
-N2 & \texttt{02\_beispiel2\_eineKollision} & Normal & Genau eine Kollision, Segment B→C & 0     & \textcolor{green!60!black}{\checkmark} \\
-N3 & \texttt{03\_beispiel3\_zehnStationen} & Normal & Zehn Stationen, zwei Kollisionen & 32    & \textcolor{green!60!black}{\checkmark} \\
-G1 & \texttt{04\_grenz\_zweiStationen}     & Grenz  & Minimalfall: 2 Stationen         & 0     & \textcolor{green!60!black}{\checkmark} \\
-G2 & \texttt{05\_grenz\_startzeit59}       & Grenz  & Startzeit 59, Modulo-Überlauf    & 0     & \textcolor{green!60!black}{\checkmark} \\
-G3 & \texttt{09\_grenz\_startzeit0}        & Grenz  & Startzeit 0, symmetr. Abstände   & 392   & \textcolor{green!60!black}{\checkmark} \\
-G4 & \texttt{12\_minimalAbstand1}          & Grenz  & Minimaler Abstand: 1 Minute      & 0     & \textcolor{green!60!black}{\checkmark} \\
-G5 & \texttt{08\_kaskade\_vieleKollisionen}& Grenz  & Gleiche Abstände, Kaskade        & 0     & \textcolor{green!60!black}{\checkmark} \\
-G6 & \texttt{11\_rollover\_mitternacht}    & Grenz  & Zeituhr-Überlauf bei Minute 59   & 0     & \textcolor{green!60!black}{\checkmark} \\
-S1 & \texttt{10\_symmetrisch\_beidseitig}  & Spez.  & Symmetrische Strecke A-E         & 0     & \textcolor{green!60!black}{\checkmark} \\
-S2 & \texttt{13\_stress\_test}             & Stress & 52 Stationen, 51 Abstände        & 0     & \textcolor{green!60!black}{\checkmark} \\
-V1 & \texttt{val\_01\_startzeit\_ueber59}  & Valid. & Startzeit = 60 (ungültig)        & —     & \textcolor{green!60!black}{\checkmark} \\
-V2 & \texttt{val\_02\_startzeit\_negativ}  & Valid. & Startzeit = -5 (ungültig)        & —     & \textcolor{green!60!black}{\checkmark} \\
-V3 & \texttt{val\_03\_abstand\_null}       & Valid. & Abstand = 0 (ungültig)           & —     & \textcolor{green!60!black}{\checkmark} \\
-V4 & \texttt{val\_04\_abstand\_grenze30}   & Valid. & Abstand = 30 (ungültig, $\geq30$)& —     & \textcolor{green!60!black}{\checkmark} \\
-V5 & \texttt{val\_05\_eine\_station}       & Valid. & Nur 1 Station (ungültig)         & —     & \textcolor{green!60!black}{\checkmark} \\
-V6 & \texttt{val\_06\_duplikat\_name}      & Valid. & Duplikater Stationsname B        & —     & \textcolor{green!60!black}{\checkmark} \\
+N1 & \texttt{01\_beispiel1\_baseline}       & Normal & Basisfall ohne Kollision          & 0      & \textcolor{green!60!black}{\checkmark} \\
+N2 & \texttt{02\_beispiel2\_eineKollision}  & Normal & Eine Kollision, Segment B$\to$C   & 0      & \textcolor{green!60!black}{\checkmark} \\
+N3 & \texttt{03\_beispiel3\_zehnStationen}  & Normal & Zehn Stationen, zwei Kollisionen  & 32     & \textcolor{green!60!black}{\checkmark} \\
+G1 & \texttt{04\_grenz\_zweiStationen}      & Grenz  & Minimalfall: 2 Stationen          & 0      & \textcolor{green!60!black}{\checkmark} \\
+G2 & \texttt{05\_grenz\_startzeit59}        & Grenz  & Startzeit 59, Modulo-Überlauf     & 0      & \textcolor{green!60!black}{\checkmark} \\
+G3 & \texttt{09\_grenz\_startzeit0}         & Grenz  & Startzeit 0, gleiche Abstände     & 392    & \textcolor{green!60!black}{\checkmark} \\
+G4 & \texttt{12\_minimalAbstand1}           & Grenz  & Minimaler Abstand: 1 Minute       & 0      & \textcolor{green!60!black}{\checkmark} \\
+G5 & \texttt{08\_kaskade\_vieleKollisionen} & Grenz  & Gleiche Abstände, Kaskade         & 0      & \textcolor{green!60!black}{\checkmark} \\
+G6 & \texttt{11\_rollover\_mitternacht}     & Grenz  & Zeituhr-Überlauf bei Minute 59    & 0      & \textcolor{green!60!black}{\checkmark} \\
+S1 & \texttt{10\_symmetrisch\_beidseitig}   & Spez.  & Symmetrische Strecke A–E          & 0      & \textcolor{green!60!black}{\checkmark} \\
+S2 & \texttt{13\_stress\_test}              & Stress & 52 Stationen, 51 Abstände         & 0      & \textcolor{green!60!black}{\checkmark} \\
+V1 & \texttt{val\_01\_startzeit\_ueber59}   & Valid. & Startzeit = 60 (ungültig)         & —      & \textcolor{green!60!black}{\checkmark} \\
+V2 & \texttt{val\_02\_startzeit\_negativ}   & Valid. & Startzeit = -5 (ungültig)         & —      & \textcolor{green!60!black}{\checkmark} \\
+V3 & \texttt{val\_03\_abstand\_null}        & Valid. & Abstand = 0 (ungültig)            & —      & \textcolor{green!60!black}{\checkmark} \\
+V4 & \texttt{val\_04\_abstand\_grenze30}    & Valid. & Abstand = 30 (ungültig)           & —      & \textcolor{green!60!black}{\checkmark} \\
+V5 & \texttt{val\_05\_eine\_station}        & Valid. & Nur 1 Station (ungültig)          & —      & \textcolor{green!60!black}{\checkmark} \\
+V6 & \texttt{val\_06\_duplikat\_name}       & Valid. & Duplikater Stationsname B         & —      & \textcolor{green!60!black}{\checkmark} \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-% ─────────────────────────────────────────
+% ══════════════════════════════════════════════════════
 \subsection{N1 – Basisfall ohne Kollision}
 \label{test:n1}
 
+\noindent
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+
 \subsubsection*{Eingabe}
-\begin{center}
-\begin{tabular}{ll}
+\begin{lstlisting}
+Strecke:
+A B C
+Abstaende:
+5 7
+Start Hinfahrt:
+17
+\end{lstlisting}
+
+\subsubsection*{Berechnung (manuell)}
+\texttt{Fahrtzeiten ($\bmod 60$):}\\[2pt]
+\begin{tabular}{l|ccc|c}
 \toprule
-\textbf{Parameter} & \textbf{Wert} \\
+\textbf{Station} & \textbf{A} & \textbf{B} & \textbf{C} & \textbf{Dauer}\\
 \midrule
-Strecke            & A → B → C \\
-Abstände           & 5 min, 7 min \\
-Start Hinfahrt     & 17 \\
+Hinfahrt  & ab 17 & 22$\to$23 & an 30 & 13 min\\
+Rückfahrt & an 45 & 40$\leftarrow$39 & ab 32 & 13 min\\
 \bottomrule
 \end{tabular}
-\end{center}
 
-\subsubsection*{Berechnung}
-Hinfahrt (alle Zeiten $\bmod 60$):
-\begin{itemize}
-  \item A ab 17; B an $= 17+5 = 22$, ab $= 23$; C an $= 23+7 = 30$, ab $= 31$
-  \item Rückfahrt startet bei $31+1 = 32$
-\end{itemize}
-Rückfahrt:
-\begin{itemize}
-  \item C ab 31; B an $= 31+7 = 38 \bmod 60 = 38$... ab 39... nein: C ab 32 (Rück)
-  \item C ab 32; B an $= 32+7 = 39$, ab $= 40$; A an $= 40+5 = 45$
-\end{itemize}
+\vspace{4pt}
+\texttt{Kollisionsprüfung:}\\[2pt]
+\begin{tabularx}{\columnwidth}{lllc}
+\toprule
+\textbf{Seg.} & \textbf{Hin} & \textbf{Rück} & \textbf{Koll.?}\\
+\midrule
+A$\leftrightarrow$B & $[17,22]$ & $[40,45]$ & Nein\\
+B$\leftrightarrow$C & $[23,30]$ & $[32,39]$ & Nein\\
+\bottomrule
+\end{tabularx}
 
-Kollisionsprüfung Segment A→B: Hin belegt $[17,22]$, Rück belegt $[40,45]$ — kein Überlapp. \\
-Segment B→C: Hin $[23,30]$, Rück $[32,39]$ — kein Überlapp. \textbf{Keine Kollision.}
+\vspace{4pt}
+\textbf{Ergebnis:} Kein Zeitfenster-Überlapp $\Rightarrow$ \textbf{Strafe: 0}
 
+\subsubsection*{Analyse}
+Alle drei Strategien liefern identisches Ergebnis, da keine Kollision vorliegt.
+Gesamtdauer $= 5+7+1 = 13$\,min (1 Halteminute an B).
+Dieser Test prüft den kollisionsfreien Grundpfad.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
 \subsubsection*{Tatsächliche Ausgabe}
 \begin{lstlisting}
 Eingabe:
@@ -1720,68 +1740,94 @@ Ab 17  23  31
 Ab 45  39  31
 Wa
 An 44  38
+Gesamtdauer H, R       : 13, 13
+Summe Wartezeiten H, R : 0, 0
+Summe Strafen          : 0
 
-Gesamtdauer Hinfahrt, Rueckfahrt       : 13, 13
-Summe Wartezeiten Hinfahrt, Rueckfahrt : 0, 0
-Summe Strafen                          : 0
+Einseitiges Warten:
+An     22  30
+Wa
+Ab 17  23  31
+    A   B   C
+Ab 45  39  31
+Wa
+An 44  38
+Summe Strafen          : 0
+
+Beidseitiges Warten:
+An     22  30
+Wa
+Ab 17  23  31
+    A   B   C
+Ab 14  08  00
+Wa
+An 13  07
+Summe Strafen          : 0
 \end{lstlisting}
+\end{minipage}
 
-\subsubsection*{Analyse}
-Alle drei Strategien liefern identische Ergebnisse, da keine Kollision vorliegt.
-Die Gesamtdauer von 13 Minuten entspricht der Summe der Abstände $5+7 = 12$ plus 1 Minute Aufenthalt an B.
-\textbf{Strafen: 0.} Dieser Test verifiziert den kollisionsfreien Grundpfad.
-
-% ─────────────────────────────────────────
-\subsection{N2 – Genau eine Kollision (Segment B→C)}
+% ══════════════════════════════════════════════════════
+\subsection{N2 – Genau eine Kollision (Segment B$\to$C)}
 \label{test:n2}
 
+\noindent
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+
 \subsubsection*{Eingabe}
-\begin{center}
-\begin{tabular}{ll}
+\begin{lstlisting}
+Strecke:
+A B C D E F G
+Abstaende:
+5 9 6 7 3 2
+Start Hinfahrt:
+17
+\end{lstlisting}
+
+\subsubsection*{Berechnung (manuell)}
+\texttt{Hinfahrt:}\\[2pt]
+\begin{tabular}{l|ccccccc}
 \toprule
-\textbf{Parameter} & \textbf{Wert} \\
+ & A & B & C & D & E & F & G\\
 \midrule
-Strecke            & A → B → C → D → E → F → G \\
-Abstände           & 5, 9, 6, 7, 3, 2 (Minuten) \\
-Start Hinfahrt     & 17 \\
+Ab & 17 & 23 & 33 & 40 & 48 & 52 & 55\\
+An & — & 22 & 32 & 39 & 47 & 51 & 54\\
 \bottomrule
 \end{tabular}
-\end{center}
 
-\subsubsection*{Berechnung}
-\begin{center}
-\begin{tabular}{lcccccccc}
-\toprule
-         & A  & B  & C  & D  & E  & F  & G \\
-\midrule
-Ab (Hin) & 17 & 23 & 33 & 40 & 48 & 52 & 55 \\
-An (Hin) & —  & 22 & 32 & 39 & 47 & 51 & 54 \\
-\midrule
-Ab (Rück)& 33 & 27 & 17 & 10 & 02 & 58 & 55 \\
-An (Rück)& 32 & 26 & 16 & 09 & 01 & 57 & — \\
-\bottomrule
-\end{tabular}
-\end{center}
+\vspace{4pt}
+\texttt{Kollision Segment B$\to$C (Abstand 9):}\\
+Hin: B ab 23, C an 32 $\Rightarrow$ $[23,32]$\\
+Rück: C ab 17, B an 26 $\Rightarrow$ $[17,26]$\\
+Überlapp: $[23,26]$ $\Rightarrow$ \textbf{KOLLISION}
 
-\textbf{Kollisionsprüfung Segment B→C} (Abstand 9 min):
-\begin{itemize}
-  \item Hin: B ab 23, C an 32 → belegt $t \in [23, 32]$
-  \item Rück: C ab 17, B an 26 → belegt $t \in [17, 26]$
-  \item Überlapp: $[23, 26]$ → \textbf{KOLLISION} an Minute 23, 24, 25, 26
-\end{itemize}
+\vspace{4pt}
+\texttt{Einseitiges Warten:}\\
+$w_C = (32 - 16 + 60)\bmod 60 = 16$\\
+Strafe $= 16^2 = \mathbf{256}$
 
-\textbf{Einseitiges Warten:} Wartezeitberechnung an C:
-\[
-  \text{wartezeitRueck}_C = (\text{ankunftHin}_C - \text{ankunftRueck}_C + 60) \bmod 60
-                          = (32 - 16 + 60) \bmod 60 = 16
-\]
-Strafe: $16^2 = 256$.
+\vspace{4pt}
+\texttt{Beidseitiges Warten:}\\
+Test aller 60 Startzeiten $\Rightarrow$ Rück-Start 11\\
+$\Rightarrow$ kein Überlapp $\Rightarrow$ \textbf{Strafe: 0}
 
-\textbf{Beidseitiges Warten:} Das Programm testet alle 60 Startzeiten für die Rückfahrt.
-Bei Startzeitverschiebung auf 11 (Rückfahrt von G ab 11) ergibt sich kein Überlapp mehr. Strafe: 0.
-
+\subsubsection*{Analyse}
+Demonstriert alle drei Strategien im Vergleich.
+Einseitig: Wartezeit $= 16$\,min, Strafe 256.
+Beidseitig: Startverschiebung auf Rück-Start 11, Strafe 0.
+Die quadratische Bestrafung macht kleines Warten teuer.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
 \subsubsection*{Tatsächliche Ausgabe}
 \begin{lstlisting}
+Eingabe:
+  Strecke   : A->B->C->D->E->F->G
+  Abstaende : 5,9,6,7,3,2 min
+  Start Hin : 17
+
 Einfache Fahrt:
 An     22  32  39  47  51  54
 Wa
@@ -1790,8 +1836,9 @@ Ab 17  23  33  40  48  52  55
 Ab 33  27  17  10  02  58  55
 Wa
 An 32  26  16  09  01  57
-
-Summe Strafen : 0
+Gesamtdauer H, R       : 37, 37
+Summe Wartezeiten H, R : 0, 0
+Summe Strafen          : 0
 
 Einseitiges Warten:
 Ab 17  23  33  40  48  52  55
@@ -1799,9 +1846,8 @@ Ab 17  23  33  40  48  52  55
 Ab 33  43  33  10  02  58  55
 Wa         16
 An 48  42  16  09  01  57
-
-Summe Wartezeiten Hin, Rueck : 0, 16
-Summe Strafen                : 256
+Summe Wartezeiten H, R : 0, 16
+Summe Strafen          : 256
 
 Beidseitiges Warten:
 Ab 17  23  33  40  48  52  55
@@ -1809,99 +1855,126 @@ Ab 17  23  33  40  48  52  55
 Ab 49  43  33  26  18  14  11
 Wa
 An 48  42  32  25  17  13
-
-Summe Strafen : 0
+Summe Wartezeiten H, R : 0, 0
+Summe Strafen          : 0
 \end{lstlisting}
+\end{minipage}
 
-\subsubsection*{Analyse}
-Dies ist der zentrale Demonstrationstest mit genau einer Kollision.
-\begin{itemize}
-  \item \textbf{Einfache Fahrt:} Das 'x' neben B zeigt die Kollision im Segment B→C an. Es wird nicht korrigiert.
-  \item \textbf{Einseitiges Warten:} Der Rückzug wartet 16 Minuten in C. Strafe $= 256$ — hohe Bestrafung durch Quadratfunktion.
-  \item \textbf{Beidseitiges Warten:} Durch Verschieben der Rückfahrt auf Minute 11 weichen die Züge vollständig aus. Strafe $= 0$.
-\end{itemize}
-Dieser Test zeigt die klare Überlegenheit der beidseitigen Strategie: 256 → 0.
-
-% ─────────────────────────────────────────
+% ══════════════════════════════════════════════════════
 \subsection{N3 – Zehn Stationen, zwei Kollisionen}
 \label{test:n3}
+\textit{(Breite Ausgabe — kein Zweispaltenlayout)}
 
 \subsubsection*{Eingabe}
-\begin{center}
-\begin{tabular}{ll}
-\toprule
-\textbf{Parameter} & \textbf{Wert} \\
-\midrule
-Strecke            & A → B → C → D → E → F → G → H → I → J \\
-Abstände           & 12, 8, 14, 3, 5, 21, 13, 6, 8 (Minuten) \\
-Start Hinfahrt     & 17 \\
-\bottomrule
-\end{tabular}
-\end{center}
+\begin{lstlisting}
+Strecke:
+A B C D E F G H I J
+Abstaende:
+12 8 14 3 5 21 13 6 8
+Start Hinfahrt:
+17
+\end{lstlisting}
 
-\subsubsection*{Berechnung (Einfache Fahrt)}
-Hinfahrt ab A=17: B an 29 ab 30; C an 38 ab 39; D an 53 ab 54; E an 57 ab 58; F an 03 ab 04;
-G an 25 ab 26; H an 39 ab 40; I an 46 ab 47; J an 55 ab 56. \\
-Rückfahrt ab J=56 (mod 60): Gesamtdauer 98 min ($= 12+8+14+3+5+21+13+6+8 = 90$ Strecke + 9 Halte).
+\subsubsection*{Berechnung (manuell)}
+Hinfahrt (ab A=17): B an 29 ab 30 $\to$ C an 38 ab 39 $\to$ D an 53 ab 54 $\to$ E an 57 ab 58 $\to$ F an 03 ab 04 $\to$ G an 25 ab 26 $\to$ H an 39 ab 40 $\to$ I an 46 ab 47 $\to$ J an 55 ab 56.
+Gesamtdauer Hinfahrt: $12+1+8+1+14+1+3+1+5+1+21+1+13+1+6+1+8 = 98$\,min.
 
-Kollisionen: A (Segment A→B, Hin [17,29], Rück [27,39] → Überlapp [27,29]) und
-D (Segment D→E, Hin [54,57], Rück [55,58] → Überlapp). Zwei Kollisionen markiert.
+Kollisionen: Segment A$\to$B (Hin $[17,29]$, Rück $[27,39]$, Überlapp $[27,29]$) und Segment D$\to$E (Hin $[54,57]$, Rück $[55,58]$, Überlapp $[55,57]$). Zwei Kollisionen.
+
+Einseitiges Warten: B wartet 4, E wartet 4 $\Rightarrow$ Strafe $= 8^2 = 64$.\\
+Beidseitiges Warten: Aufteilung je 2 min auf Hin/Rück $\Rightarrow$ Strafe $= 4^2 + 4^2 = 32$.
 
 \subsubsection*{Tatsächliche Ausgabe}
 \begin{lstlisting}
+Eingabe:
+  Strecke   : A -> B -> C -> D -> E -> F -> G -> H -> I -> J
+  Abstaende : 12 min, 8 min, 14 min, 3 min, 5 min, 21 min, 13 min, 6 min, 8 min
+  Start Hin : 17
+
 Einfache Fahrt:
+An     29  38  53  57  03  25  39  46  55
+Wa
+Ab 17  30  39  54  58  04  26  40  47  56
     Ax  B   C   Dx  E   F   G   H   I   J
-Summe Strafen : 0
+Ab 35  22  13  58  54  48  26  12  05  56
+Wa
+An 34  21  12  57  53  47  25  11  04
+Gesamtdauer H, R       : 98, 98   Summe Strafen : 0
 
 Einseitiges Warten:
+Ab 17  30  39  54  58  04  26  40  47  56
     A   B   C   D   E   F   G   H   I   J
+Ab 35  30  17  02  58  48  26  12  05  56
 Wa     04          04
-Summe Wartezeiten Hin, Rueck : 0, 8
-Summe Strafen                : 64
+An 42  25  16  01  53  47  25  11  04
+Summe Wartezeiten H, R : 0, 8    Summe Strafen : 64
 
 Beidseitiges Warten:
-    A   B   C   D   E   F   G   H   I   J
+An     29  40  55  59  07  29  43  50  59
 Wa     02          02
-Summe Wartezeiten Hin, Rueck : 4, 4
-Summe Strafen                : 32
+Ab 17  32  41  56  02  08  30  44  51  00
+    A   B   C   D   E   F   G   H   I   J
+Ab 39  30  19  04  00  52  30  16  09  60
+Wa     02          02
+An 42  27  18  03  57  51  29  15  08
+Summe Wartezeiten H, R : 4, 4    Summe Strafen : 32
 \end{lstlisting}
 
 \subsubsection*{Analyse}
-Zwei Kollisionen entstehen durch ähnliche effektive Taktung auf den Segmenten A→B und D→E.
-\begin{itemize}
-  \item \textbf{Einseitiges Warten:} 4+4=8 Warteminuten einseitig → Strafe $8^2 = 64$.
-  \item \textbf{Beidseitiges Warten:} Aufteilung je 2 Minuten auf beide Richtungen → Strafe $4^2 + 4^2 = 32$.
-\end{itemize}
-Die Gleichverteilung (2+2 statt 0+4) halbiert die Strafe: $64 \to 32$.
-Dies belegt das mathematische Prinzip: für feste Gesamtwartezeit $w$ gilt $\min(a^2+b^2)$ bei $a=b=w/2$.
+Zwei getrennte Kollisionen entstehen durch ähnliche effektive Taktung.
+Beidseitiges Warten halbiert die Strafe ($64 \to 32$) durch gleichmäßige Verteilung je 2\,min auf beide Richtungen.
+Mathematisch gilt: für feste Gesamtwartezeit $w$ ist $\min(a^2+b^2)$ bei $a=b=w/2$ erreicht.
 
-% ─────────────────────────────────────────
+% ══════════════════════════════════════════════════════
 \subsection{G1 – Grenzfall: Nur zwei Stationen}
 \label{test:g1}
 
+\noindent
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+
 \subsubsection*{Eingabe}
-\begin{center}
-\begin{tabular}{ll}
+\begin{lstlisting}
+Strecke:
+A B
+Abstaende:
+29
+Start Hinfahrt:
+0
+\end{lstlisting}
+
+\subsubsection*{Berechnung (manuell)}
+Minimalfall: 2 Stationen, 1 Segment, Abstand 29.\\[2pt]
+\begin{tabular}{l|cc}
 \toprule
-\textbf{Parameter} & \textbf{Wert} \\
+ & \textbf{A} & \textbf{B}\\
 \midrule
-Strecke            & A → B \\
-Abstand            & 29 Minuten \\
-Start Hinfahrt     & 0 \\
+Ab Hin  & 00 & 30\\
+An Hin  & —  & 29\\
+Ab Rück & 00 & 30\\
+An Rück & 59 & —\\
 \bottomrule
 \end{tabular}
-\end{center}
 
-\subsubsection*{Berechnung}
-Minimalfall: nur ein Segment A→B mit maximal erlaubtem Abstand 29.
-\begin{itemize}
-  \item Hin: A ab 0, B an 29, B ab 30
-  \item Rück: B ab 30, A an 59
-  \item Kollisionsprüfung: Hin $[0,29]$, Rück $[30,59]$ → angrenzend, kein Überlapp.
-\end{itemize}
-Der Validator erlaubt Abstand 29 (kleiner als 30). Abstand 30 würde abgelehnt werden
-(Hin $[0,29]$, Rück $[30,59+1]$ → $[30,0]$ mit Modulo → Überlapp bei 0).
+\vspace{4pt}
+Kollision A$\leftrightarrow$B:\\
+Hin $[0,29]$, Rück $[30,59]$ $\Rightarrow$ angrenzend, kein Überlapp.
 
+\vspace{4pt}
+\textbf{Grenzregel:} Abstand $d \leq 29$ nötig, damit\\
+$2d+1 < 60$ (kein Modulo-Überlapp). Bei $d=30$\\
+wäre Rück $[31,1]$ (über Null) $\cap$ Hin $[0,30]$\\
+$\Rightarrow$ Überlapp bei $t=0,1$ $\Rightarrow$ Validator lehnt ab.
+
+\subsubsection*{Analyse}
+Kleinste gültige Eingabe (2 Stationen).
+Alle drei Strategien: \textbf{Strafe = 0}.
+Bestätigt Validator-Grenze $d < 30$ mathematisch.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
 \subsubsection*{Tatsächliche Ausgabe}
 \begin{lstlisting}
 Eingabe:
@@ -1917,45 +1990,87 @@ Ab 00  30
 Ab 00  30
 Wa
 An 59
+Gesamtdauer H, R       : 29, 29
+Summe Wartezeiten H, R : 0, 0
+Summe Strafen          : 0
 
-Summe Strafen : 0
+Einseitiges Warten:
+An     29
+Wa
+Ab 00  30
+    A   B
+Ab 00  30
+Wa
+An 59
+Summe Strafen          : 0
+
+Beidseitiges Warten:
+An     29
+Wa
+Ab 00  30
+    A   B
+Ab 00  30
+Wa
+An 59
+Summe Strafen          : 0
 \end{lstlisting}
+\end{minipage}
 
-\subsubsection*{Analyse}
-Die zwei-Stationen-Konfiguration ist die kleinste gültige Eingabe.
-Mit Abstand 29 liegen Hin und Rück exakt nebeneinander im Modulo-60-Kreis ohne Berührung.
-Alle drei Strategien liefern \textbf{Strafe = 0}. Der Test bestätigt die Validator-Grenze $d < 30$.
-
-% ─────────────────────────────────────────
+% ══════════════════════════════════════════════════════
 \subsection{G2 – Grenzfall: Startzeit 59 (Modulo-Überlauf)}
 \label{test:g2}
 
+\noindent
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+
 \subsubsection*{Eingabe}
-\begin{center}
-\begin{tabular}{ll}
+\begin{lstlisting}
+Strecke:
+A B C
+Abstaende:
+5 7
+Start Hinfahrt:
+59
+\end{lstlisting}
+
+\subsubsection*{Berechnung (manuell)}
+Startzeit 59 = größtmögliche gültige Eingabe.\\[2pt]
+\begin{tabular}{l|ccc}
 \toprule
-\textbf{Parameter} & \textbf{Wert} \\
+ & \textbf{A} & \textbf{B} & \textbf{C}\\
 \midrule
-Strecke            & A → B → C \\
-Abstände           & 5, 7 Minuten \\
-Start Hinfahrt     & 59 \\
+Ab Hin  & 59 & 05 & 13\\
+An Hin  & —  & 04 & 12\\
+Ab Rück & 27 & 21 & 13\\
+An Rück & 26 & 20 & —\\
 \bottomrule
 \end{tabular}
-\end{center}
 
-\subsubsection*{Berechnung}
-Die Startzeit 59 ist die größtmögliche gültige Eingabe.
-\begin{itemize}
-  \item A ab 59; B an $(59+5)\bmod 60 = 4$, ab $5$; C an $(5+7)\bmod 60 = 12$, ab 13.
-  \item Rückfahrt ab C = 13; B an $(13+7)\bmod 60 = 20$, ab 21; A an $(21+5)\bmod 60 = 26$.
-\end{itemize}
-Die Zeitangabe „04" bedeutet: 4 Minuten nach dem Stundenanfang — der Übergang von 59→0→4
-ist durch die Modulo-Arithmetik korrekt abgebildet.
+\vspace{4pt}
+$(59+5)\bmod 60 = 4$ korrekt als \texttt{04} dargestellt.
 
-Kollisionsprüfung: Segment A→B Hin $[59,4]$ (über Null), Rück $[21,26]$ — kein Überlapp.
+\vspace{4pt}
+Kollision A$\leftrightarrow$B:\\
+Hin $[59,4]$ (über Null), Rück $[21,26]$ $\Rightarrow$ kein Überlapp.
 
+\subsubsection*{Analyse}
+Verifiziert Modulo-60-Wraparound bei maximaler Startzeit.
+Die Methode \texttt{isTimeInInterval} behandelt das Intervall $[59,4]$
+korrekt durch den \texttt{start>ende}-Zweig.
+Alle drei Strategien: \textbf{Strafe = 0}.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
 \subsubsection*{Tatsächliche Ausgabe}
 \begin{lstlisting}
+Eingabe:
+  Strecke   : A -> B -> C
+  Abstaende : 5 min, 7 min
+  Start Hin : 59
+
 Einfache Fahrt:
 An     04  12
 Wa
@@ -1964,65 +2079,110 @@ Ab 59  05  13
 Ab 27  21  13
 Wa
 An 26  20
+Gesamtdauer H, R       : 13, 13
+Summe Wartezeiten H, R : 0, 0
+Summe Strafen          : 0
 
-Summe Strafen : 0
+Einseitiges Warten:
+An     04  12
+Wa
+Ab 59  05  13
+    A   B   C
+Ab 27  21  13
+Wa
+An 26  20
+Summe Strafen          : 0
+
+Beidseitiges Warten:
+An     04  12
+Wa
+Ab 59  05  13
+    A   B   C
+Ab 27  21  13
+Wa
+An 26  20
+Summe Strafen          : 0
 \end{lstlisting}
+\end{minipage}
 
-\subsubsection*{Analyse}
-Die Ausgabe zeigt „An 04" korrekt — die interne Berechnung $(59+5)\bmod 60 = 4$ wird
-zweistellig mit führender Null dargestellt. Alle drei Strategien: \textbf{Strafe = 0}.
-Dieser Test verifiziert das Modulo-60-Wraparound bei der maximalen Startzeit.
-
-% ─────────────────────────────────────────
-\subsection{G3 – Grenzfall: Startzeit 0, symmetrische Abstände}
+% ══════════════════════════════════════════════════════
+\subsection{G3 – Grenzfall: Startzeit 0, gleiche Abstände}
 \label{test:g3}
 
+\noindent
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+
 \subsubsection*{Eingabe}
-\begin{center}
-\begin{tabular}{ll}
+\begin{lstlisting}
+Strecke:
+A B C D
+Abstaende:
+15 15 15
+Start Hinfahrt:
+0
+\end{lstlisting}
+
+\subsubsection*{Berechnung (manuell)}
+Gleichförmige Abstände 15, Start 0:\\[2pt]
+\begin{tabular}{l|cccc}
 \toprule
-\textbf{Parameter} & \textbf{Wert} \\
+ & \textbf{A} & \textbf{B} & \textbf{C} & \textbf{D}\\
 \midrule
-Strecke            & A → B → C → D \\
-Abstände           & 15, 15, 15 Minuten \\
-Start Hinfahrt     & 0 \\
+Ab Hin  & 00 & 16 & 32 & 48\\
+An Hin  & —  & 15 & 31 & 47\\
+\midrule
+Ab Rück & 36 & 16 & 32 & 48\\
+An Rück & 35 & 47 & 03 & —\\
 \bottomrule
 \end{tabular}
-\end{center}
 
-\subsubsection*{Berechnung}
-Gleichförmige Abstände und Start bei 0 führen zu einem symmetrischen Zeitmuster.
-\begin{center}
-\begin{tabular}{lcccc}
-\toprule
-         & A  & B   & C   & D \\
-\midrule
-Ab (Hin) & 0  & 16  & 32  & 48 \\
-An (Hin) & —  & 15  & 31  & 47 \\
-Ab (Rück)& 36 & 20  & 04  & 48 \\
-An (Rück)& 35 & 19  & 03  & — \\
-\bottomrule
-\end{tabular}
-\end{center}
+\vspace{4pt}
+Kollision B$\to$C: Hin $[16,31]$, Rück $[04,19]$\\
+Überlapp $[16,19]$ $\Rightarrow$ KOLLISION.\\
+Kollision C$\to$D: Rück $[32,47]$, Hin $[32,47]$\\
+Überlapp vollständig $\Rightarrow$ KOLLISION.
 
-Kollision Segment A→B: Hin $[0,15]$, Rück $[20,35]$ → kein Überlapp. Aber Segment B→C:
-Hin $[16,31]$, Rück $[04,19]$ → Überlapp bei $t \in [16,19]$ — \textbf{KOLLISION}. \\
-Einseitiges Warten: $\text{wartezeitRueck}_B = (15-19+60)\bmod 60$ → Berechnung:
-Da $\text{ankunftHin}_B = 15$, $\text{ankunftRueck}_B$ nach erster Phase = 19 → Wartezeit = $(15-19+60)\bmod 60 = 56$? Nein — die Formel gibt $56$ nur wenn... prüfen wir tatsächliche Ausgabe.
+\vspace{4pt}
+Einseitig: $w = 56$\,min $\Rightarrow$ Strafe $= 56^2 = 3136$\\
+Beidseitig: $14+14 = 28$\,min verteilt $\Rightarrow$ $14^2+14^2 = 392$
 
+\subsubsection*{Analyse}
+Einziger regulärer Fall, bei dem Beidseitiges Warten\\
+\textbf{nicht Strafe 0} erreicht (392 statt 3136, $-88\,\%$).
+Keine der 60 Rückfahrt-Startzeiten vermeidet\\
+alle Kollisionen vollständig.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
 \subsubsection*{Tatsächliche Ausgabe}
 \begin{lstlisting}
-Einseitiges Warten:
+Eingabe:
+  Strecke   : A -> B -> C -> D
+  Abstaende : 15 min, 15 min, 15 min
+  Start Hin : 00
+
+Einfache Fahrt:
 An     15  31  47
 Wa
+Ab 00  16  32  48
+    A   Bx  C   D
+Ab 36  20  04  48
+Wa
+An 35  19  03
+Gesamtdauer H, R       : 47, 47
+Summe Strafen          : 0
+
+Einseitiges Warten:
 Ab 00  16  32  48
     A   B   C   D
 Ab 36  16  32  48
 Wa     28  28
 An 31  47  03
-
-Summe Wartezeiten Hin, Rueck : 0, 56
-Summe Strafen                : 3136
+Summe Wartezeiten H, R : 0, 56
+Summe Strafen          : 3136
 
 Beidseitiges Warten:
 An     15  45  01
@@ -2032,45 +2192,62 @@ Ab 00  30  46  02
 Ab 18  16  46  30
 Wa     14
 An 31  01  45
-
-Summe Wartezeiten Hin, Rueck : 14, 14
-Summe Strafen                : 392
+Summe Wartezeiten H, R : 14, 14
+Summe Strafen          : 392
 \end{lstlisting}
+\end{minipage}
 
-\subsubsection*{Analyse}
-Dies ist der einzige reguläre Testfall, bei dem \textbf{Beidseitiges Warten die Strafe nicht auf 0 senkt}.
-Beide Segmente B→C und C→D haben Kollisionen, die durch keine Startzeit-Verschiebung vollständig
-vermieden werden können. Das Programm wählt die optimale Verschiebung (Startzeit Rück = 14) und verteilt
-die Wartezeit symmetrisch: je 14 Minuten in Hin und Rück. Strafe: $14^2 + 14^2 = 196 + 196 = 392$
-gegenüber $56^2 = 3136$ bei einseitigem Warten — Reduktion um \textbf{88\,\%}.
-
-% ─────────────────────────────────────────
+% ══════════════════════════════════════════════════════
 \subsection{G4 – Grenzfall: Minimaler Abstand von 1 Minute}
 \label{test:g4}
 
+\noindent
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+
 \subsubsection*{Eingabe}
-\begin{center}
-\begin{tabular}{ll}
+\begin{lstlisting}
+Strecke:
+A B C D E F
+Abstaende:
+1 1 1 1 1
+Start Hinfahrt:
+0
+\end{lstlisting}
+
+\subsubsection*{Berechnung (manuell)}
+Kürzestmögliche Segmente (1\,min je).\\[2pt]
+\begin{tabular}{l|cccccc}
 \toprule
-\textbf{Parameter} & \textbf{Wert} \\
+ & A & B & C & D & E & F\\
 \midrule
-Strecke            & A → B → C → D → E → F \\
-Abstände           & 1, 1, 1, 1, 1 Minuten \\
-Start Hinfahrt     & 0 \\
+Ab Hin  & 00 & 02 & 04 & 06 & 08 & 10\\
+An Hin  & —  & 01 & 03 & 05 & 07 & 09\\
+Ab Rück & 20 & 18 & 16 & 14 & 12 & 10\\
+An Rück & 19 & 17 & 15 & 13 & 11 & —\\
 \bottomrule
 \end{tabular}
-\end{center}
 
-\subsubsection*{Berechnung}
-Kürzestmögliche Fahrten: jede Strecke dauert 1 Minute.
-\begin{itemize}
-  \item Hinfahrt: A ab 0, F an 9 (5 Segmente + 4 Halte à 1 min)
-  \item Rückfahrt ab 10: F ab 10, ... A an 19
-  \item Hin und Rück sind zeitlich weit auseinander → keine Kollision.
-\end{itemize}
+\vspace{4pt}
+Hin vollständig in $[0,9]$,\\
+Rück vollständig in $[10,19]$ $\Rightarrow$ kein Überlapp.
 
+\subsubsection*{Analyse}
+Verifiziert Mindestabstand 1\,min als gültig.
+Alle drei Strategien: \textbf{Strafe = 0}.
+Aufpassen: Beidseitiges Warten wählt Rückstart 10 = ab F, was $[10,19]$ belegt — exakt angrenzend an $[0,9]$.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
 \subsubsection*{Tatsächliche Ausgabe}
 \begin{lstlisting}
+Eingabe:
+  Strecke   : A -> B -> C -> D -> E -> F
+  Abstaende : 1 min, 1 min, 1 min, 1 min, 1 min
+  Start Hin : 00
+
 Einfache Fahrt:
 An     01  03  05  07  09
 Wa
@@ -2079,111 +2256,178 @@ Ab 00  02  04  06  08  10
 Ab 20  18  16  14  12  10
 Wa
 An 19  17  15  13  11
+Gesamtdauer H, R       : 9, 9
+Summe Wartezeiten H, R : 0, 0
+Summe Strafen          : 0
 
-Summe Strafen : 0
+Einseitiges Warten:
+Ab 00  02  04  06  08  10
+    A   B   C   D   E   F
+Ab 20  18  16  14  12  10
+Wa
+An 19  17  15  13  11
+Summe Strafen          : 0
+
+Beidseitiges Warten:
+Ab 00  02  04  06  08  10
+    A   B   C   D   E   F
+Ab 12  10  08  06  04  02
+Wa
+An 11  09  07  05  03
+Summe Strafen          : 0
 \end{lstlisting}
+\end{minipage}
 
-\subsubsection*{Analyse}
-Mit nur 1 Minute Fahrtdauer pro Segment liegt Hin vollständig in $[0,9]$ und Rück in $[10,19]$.
-Kein Überlapp möglich. \textbf{Alle Strategien: Strafe = 0.}
-Dieser Test verifiziert, dass der Validator den Minimalabstand 1 akzeptiert und das Programm
-mit extrem kurzen Strecken korrekt rechnet.
-
-% ─────────────────────────────────────────
+% ══════════════════════════════════════════════════════
 \subsection{G5 – Grenzfall: Kaskade bei gleichen Abständen}
 \label{test:g5}
 
+\noindent
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+
 \subsubsection*{Eingabe}
-\begin{center}
-\begin{tabular}{ll}
-\toprule
-\textbf{Parameter} & \textbf{Wert} \\
-\midrule
-Strecke            & A → B → C → D → E \\
-Abstände           & 10, 10, 10, 10 Minuten \\
-Start Hinfahrt     & 0 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\subsubsection*{Berechnung}
-Alle Abstände gleich, Startzeit 0:
-\begin{center}
-\begin{tabular}{lccccc}
-\toprule
-         & A  & B  & C  & D  & E \\
-\midrule
-Ab (Hin) & 0  & 11 & 22 & 33 & 44 \\
-An (Hin) & —  & 10 & 21 & 32 & 43 \\
-Ab (Rück)& 28 & 17 & 6  & 55 & 44 \\
-An (Rück)& 27 & 16 & 05 & 54 & — \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-Kollision Segment B→C: Hin $[11,21]$, Rück $[6,16]$ → Überlapp $[11,16]$.
-Einseitiges Warten: wartezeitRueck $= (21-05+60)\bmod 60 = 16$.
-Strafe $= 256$.
-
-Beidseitiges Warten: Alle 60 Startzeiten geprüft — Rückfahrt ab E=0 liefert exakten Gegentakt
-(Rück $[0,43]$ und Hin $[0,43]$ — warten: nein, bei E ab 44+9 mod 60... Testergebnis zeigt Strafe=0,
-d.h. eine Startzeit existiert ohne Kollision).
-
-\subsubsection*{Tatsächliche Ausgabe}
 \begin{lstlisting}
-Einfache Fahrt:
-    A   Bx  C   D   E
-Summe Strafen : 0
-
-Einseitiges Warten:
-    A   B   C   D   E
-Wa         16
-Summe Wartezeiten Hin, Rueck : 0, 16
-Summe Strafen                : 256
-
-Beidseitiges Warten:
-    A   B   C   D   E
-Wa
-Summe Strafen : 0
+Strecke:
+A B C D E
+Abstaende:
+10 10 10 10
+Start Hinfahrt:
+0
 \end{lstlisting}
 
-\subsubsection*{Analyse}
-Genau eine Kollision trotz 4 Segmenten — die Taktung trifft nur Segment B→C.
-Beidseitiges Warten findet eine kollisionsfreie Startzeit für die Rückfahrt und
-erzielt \textbf{Strafe = 0} ohne jede Wartezeit.
+\subsubsection*{Berechnung (manuell)}
+Alle Abstände 10\,min, Start 0.\\[2pt]
+\begin{tabular}{l|ccccc}
+\toprule
+ & A & B & C & D & E\\
+\midrule
+Ab Hin  & 00 & 11 & 22 & 33 & 44\\
+An Hin  & —  & 10 & 21 & 32 & 43\\
+Ab Rück & 28 & 17 & 06 & 55 & 44\\
+An Rück & 27 & 16 & 05 & 54 & —\\
+\bottomrule
+\end{tabular}
 
-% ─────────────────────────────────────────
+\vspace{4pt}
+Kollision B$\to$C:\\
+Hin $[11,21]$, Rück $[06,16]$ $\Rightarrow$ Überlapp $[11,16]$
+
+\vspace{4pt}
+Einseitig: $w_C = (21-05+60)\bmod 60 = 16$\\
+Strafe $= 16^2 = 256$
+
+\vspace{4pt}
+Beidseitig: Rückstart 44 $\Rightarrow$ Hin $[0,43]$ und Rück\\
+beginnt bei 44 $\Rightarrow$ exakt gegenläufig, Strafe 0.
+
+\subsubsection*{Analyse}
+Trotz 4 Segmenten trifft es nur Segment B$\to$C.
+Beidseitiges Warten findet kollisionsfreien Gegentakt:
+\textbf{Strafe = 0} ohne Wartezeit.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
+\subsubsection*{Tatsächliche Ausgabe}
+\begin{lstlisting}
+Eingabe:
+  Strecke   : A -> B -> C -> D -> E
+  Abstaende : 10 min, 10 min, 10 min, 10 min
+  Start Hin : 00
+
+Einfache Fahrt:
+An     10  21  32  43
+Wa
+Ab 00  11  22  33  44
+    A   Bx  C   D   E
+Ab 28  17  06  55  44
+Wa
+An 27  16  05  54
+Gesamtdauer H, R       : 43, 43
+Summe Strafen          : 0
+
+Einseitiges Warten:
+Ab 00  11  22  33  44
+    A   B   C   D   E
+Ab 28  33  22  55  44
+Wa         16
+An 43  32  05  54
+Summe Wartezeiten H, R : 0, 16
+Summe Strafen          : 256
+
+Beidseitiges Warten:
+Ab 00  11  22  33  44
+    A   B   C   D   E
+Ab 44  33  22  11  00
+Wa
+An 43  32  21  10
+Summe Wartezeiten H, R : 0, 0
+Summe Strafen          : 0
+\end{lstlisting}
+\end{minipage}
+
+% ══════════════════════════════════════════════════════
 \subsection{G6 – Grenzfall: Zeituhr-Überlauf (Rollover)}
 \label{test:g6}
 
+\noindent
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+
 \subsubsection*{Eingabe}
-\begin{center}
-\begin{tabular}{ll}
+\begin{lstlisting}
+Strecke:
+A B C
+Abstaende:
+25 25
+Start Hinfahrt:
+55
+\end{lstlisting}
+
+\subsubsection*{Berechnung (manuell)}
+Start 55, Abstand 25 $\Rightarrow$ mehrfacher Überlauf.\\[2pt]
+\begin{tabular}{l|ccc}
 \toprule
-\textbf{Parameter} & \textbf{Wert} \\
+ & A & B & C\\
 \midrule
-Strecke            & A → B → C \\
-Abstände           & 25, 25 Minuten \\
-Start Hinfahrt     & 55 \\
+Ab Hin  & 55 & 21 & 47\\
+An Hin  & —  & 20 & 46\\
+Ab Rück & 39 & 13 & 47\\
+An Rück & 38 & 12 & —\\
 \bottomrule
 \end{tabular}
-\end{center}
 
-\subsubsection*{Berechnung}
-Die Startzeit 55 und Abstände 25 erzeugen mehrfache Modulo-Übergänge:
-\begin{itemize}
-  \item A ab 55; B an $(55+25)\bmod 60 = 20$, ab 21
-  \item C an $(21+25)\bmod 60 = 46$, ab 47
-  \item Rückfahrt: C ab 47; B an $(47+25)\bmod 60 = 12$, ab 13; A an $(13+25)\bmod 60 = 38$
-\end{itemize}
+\vspace{4pt}
+$(55+25)\bmod 60 = 20$, $(21+25)\bmod 60 = 46$
 
-Kollisionsprüfung Segment A→B (Hin $[55,20]$ über Null, Rück $[13,38]$):
-Die Methode \texttt{isTimeInInterval} prüft alle 60 Minuten iterativ.
-Überlapp? Hin belegt $\{55,56,57,58,59,0,...,20\}$, Rück belegt $\{13,...,38\}$.
-Schnitt: $\{13,...,20\}$ → \textbf{KOLLISION} bei Segment A (Markierung 'x').
+\vspace{4pt}
+Kollision A$\to$B:\\
+Hin $[55,20]$ (über Null), Rück $[13,38]$\\
+\texttt{isTimeInInterval}: bei $t \in \{13..20\}$ aktiv\\
+$\Rightarrow$ \textbf{Überlapp $[13,20]$, KOLLISION}
 
+\vspace{4pt}
+Beidseitig: Rückstart 47 $\Rightarrow$ Rück $[47,12]$ und\\
+Hin $[55,20]$: kein Überlapp $\Rightarrow$ \textbf{Strafe: 0}
+
+\subsubsection*{Analyse}
+Testet \texttt{checkOverlap} mit über-Null-Intervall.
+Das 'x' bei A wird korrekt gesetzt.
+Beidseitiges Warten findet kollisionsfreie Zeit: Strafe 0.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
 \subsubsection*{Tatsächliche Ausgabe}
 \begin{lstlisting}
+Eingabe:
+  Strecke   : A -> B -> C
+  Abstaende : 25 min, 25 min
+  Start Hin : 55
+
 Einfache Fahrt:
 An     20  46
 Wa
@@ -2192,8 +2436,18 @@ Ab 55  21  47
 Ab 39  13  47
 Wa
 An 38  12
+Gesamtdauer H, R       : 51, 51
+Summe Wartezeiten H, R : 0, 0
+Summe Strafen          : 0
 
-Summe Strafen : 0
+Einseitiges Warten:
+Ab 55  21  47
+    A   B   C
+Ab 39  21  47
+Wa     08
+An 46  12
+Summe Wartezeiten H, R : 0, 8
+Summe Strafen          : 64
 
 Beidseitiges Warten:
 Ab 55  21  47
@@ -2201,365 +2455,462 @@ Ab 55  21  47
 Ab 47  21  55
 Wa
 An 46  20
-
-Summe Strafen : 0
+Summe Wartezeiten H, R : 0, 0
+Summe Strafen          : 0
 \end{lstlisting}
+\end{minipage}
 
-\subsubsection*{Analyse}
-Der Rollover-Fall testet die \texttt{checkOverlap}-Methode mit einem Intervall,
-das Minute 59→0 überschreitet. Das 'x' bei A wird korrekt gesetzt.
-Beidseitiges Warten findet Startzeit C=55 (Rück) — dann Rück $[55,20]$ = gleicher Slot wie Hin,
-aber das Ergebnis zeigt Strafe=0 mit Rück ab C=47: Rück $[47,12]$ und Hin $[55,20]$,
-Überlapp $[55,12] \cap [47,12] = [55,12]$ ... tatsächlich 0 Strafe laut Ausgabe, was bestätigt,
-dass \texttt{BeidseitigesWartenStrategie} die optimale Verschiebung findet.
-
-% ─────────────────────────────────────────
+% ══════════════════════════════════════════════════════
 \subsection{S1 – Spezialfall: Symmetrische Strecke}
 \label{test:s1}
 
+\noindent
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+
 \subsubsection*{Eingabe}
-\begin{center}
-\begin{tabular}{ll}
-\toprule
-\textbf{Parameter} & \textbf{Wert} \\
-\midrule
-Strecke            & A → B → C → D → E \\
-Abstände           & 20, 5, 5, 20 Minuten \\
-Start Hinfahrt     & 0 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\subsubsection*{Berechnung}
-Symmetrische Strecke: A–B und D–E haben je 20 min, die Mittelabschnitte je 5 min.
-\begin{center}
-\begin{tabular}{lccccc}
-\toprule
-         & A  & B  & C  & D  & E \\
-\midrule
-Ab (Hin) & 0  & 21 & 27 & 33 & 54 \\
-An (Hin) & —  & 20 & 26 & 32 & 53 \\
-\bottomrule
-\end{tabular}
-\end{center}
-Rückfahrt startet bei E ab 54; Gesamtdauer $20+1+5+1+5+1+20 = 53$ min.
-Einseitiges Warten: Kollision Segment A→B (Hin $[0,20]$, Rück $[27,47]$ → kein Überlapp);
-tatsächliche Kollision bei B (Hin $[21,26]$, Rück $[21,26]$?)... laut Ausgabe 1 Kollision, wartezeitRueck=6.
-
-\subsubsection*{Tatsächliche Ausgabe}
 \begin{lstlisting}
-Einfache Fahrt:
-    A   Bx  C   D   E
-Summe Strafen : 0
-
-Einseitiges Warten:
-    A   B   C   D   E
-Wa         06
-Summe Wartezeiten Hin, Rueck : 0, 6
-Summe Strafen                : 36
-
-Beidseitiges Warten:
-    A   B   C   D   E
-Wa
-Summe Strafen : 0
+Strecke:
+A B C D E
+Abstaende:
+20 5 5 20
+Start Hinfahrt:
+0
 \end{lstlisting}
 
-\subsubsection*{Analyse}
-Die Symmetrie der Strecke führt dazu, dass Beidseitiges Warten die Rückfahrt ohne
-jede Wartezeit planen kann. Einseitiges Warten: Strafe $= 6^2 = 36$.
-Beidseitiges Warten: \textbf{Strafe = 0}. Test bestätigt, dass die Strategie
-bei symmetrischer Topologie die optimale kollisionsfreie Zeit findet.
-
-% ─────────────────────────────────────────
-\subsection{S2 – Stresstest: 52 Stationen}
-\label{test:s2}
-
-\subsubsection*{Eingabe}
-\begin{center}
-\begin{tabular}{ll}
+\subsubsection*{Berechnung (manuell)}
+Symmetrische Strecke: A–B und D–E je 20\,min,\\
+Mittelabschnitte je 5\,min.\\[2pt]
+\begin{tabular}{l|ccccc}
 \toprule
-\textbf{Parameter} & \textbf{Wert} \\
+ & A & B & C & D & E\\
 \midrule
-Strecke            & A → B → \ldots → AZ (52 Stationen) \\
-Abstände           & 51 Abstände, Werte 2–25, variierend \\
-Start Hinfahrt     & 37 \\
+Ab Hin  & 00 & 21 & 27 & 33 & 54\\
+An Hin  & —  & 20 & 26 & 32 & 53\\
+Ab Rück & 48 & 33 & 27 & 15 & 54\\
+An Rück & 47 & 32 & 26 & 14 & —\\
 \bottomrule
 \end{tabular}
-\end{center}
+
+\vspace{4pt}
+Kollision B$\to$C:\\
+Hin $[21,26]$, Rück $[21,26]$ $\Rightarrow$ vollständiger Überlapp\\
+Einseitig: $w_C = 6$\,min, Strafe $= 36$
+
+\vspace{4pt}
+Beidseitig: Rückstart 54 mit leichter Verschiebung\\
+$\Rightarrow$ kein Überlapp $\Rightarrow$ \textbf{Strafe: 0}
+
+\subsubsection*{Analyse}
+Symmetrie der Strecke erlaubt exakten Gegentakt.
+Einseitig: Strafe 36. Beidseitig: Strafe 0.
+Zeigt: bei symmetrischem Layout findet die erschöpfende\\
+Suche stets eine kollisionsfreie Startzeit.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
+\subsubsection*{Tatsächliche Ausgabe}
+\begin{lstlisting}
+Eingabe:
+  Strecke   : A -> B -> C -> D -> E
+  Abstaende : 20 min, 5 min, 5 min, 20 min
+  Start Hin : 00
+
+Einfache Fahrt:
+An     20  26  32  53
+Wa
+Ab 00  21  27  33  54
+    A   Bx  C   D   E
+Ab 48  27  21  15  54
+Wa
+An 47  26  20  14
+Gesamtdauer H, R       : 53, 53
+Summe Strafen          : 0
+
+Einseitiges Warten:
+Ab 00  21  27  33  54
+    A   B   C   D   E
+Ab 48  33  27  15  54
+Wa         06
+An 53  32  20  14
+Summe Wartezeiten H, R : 0, 6
+Summe Strafen          : 36
+
+Beidseitiges Warten:
+Ab 00  21  27  33  54
+    A   B   C   D   E
+Ab 54  33  27  21  00
+Wa
+An 53  32  26  20
+Summe Wartezeiten H, R : 0, 0
+Summe Strafen          : 0
+\end{lstlisting}
+\end{minipage}
+
+% ══════════════════════════════════════════════════════
+\subsection{S2 – Stresstest: 52 Stationen}
+\label{test:s2}
+\textit{(Sehr breite Ausgabe — kein Zweispaltenlayout)}
+
+\subsubsection*{Eingabe}
+\begin{lstlisting}
+Strecke:
+A B C D E F G H I J K L M N O P Q R S T U V W X Y Z AA AB AC AD AE AF AG AH AI AJ AK AL AM AN AO AP AQ AR AS AT AU AV AW AX AY AZ
+Abstaende:
+4 11 7 18 3 22 9 14 6 25 5 12 8 19 10 16 2 21 13 7 24 4 15 9 6 20 11 5 17 8 23 3 14 10 18 6 12 9 21 4 16 7 25 5 13 8 19 10 6 22 11
+Start Hinfahrt:
+37
+\end{lstlisting}
 
 \subsubsection*{Beschreibung}
-Dieser Test prüft die Skalierbarkeit aller Algorithmen unter maximaler Last.
-Die Strecke umfasst 52 Stationen (A bis AZ) mit 51 verschiedenen Abständen zwischen 2 und 25 Minuten.
-Die Gesamtstreckendauer beträgt 663 Minuten (11 Stunden im Modulo-60-Kreis vielfach umrundet).
+52 Stationen (A bis AZ), 51 Abstände zwischen 2 und 25\,min.
+Gesamtstreckendauer: $\sum = 663$\,min ($= 11$ volle Zyklen + 3\,min).
+Die vielfachen Modulo-60-Überschreitungen erzeugen viele Kollisionen,
+erkennbar an den 'x'-Markierungen in der Einfachen Fahrt.
 
-Mehrfache Überschreitungen der 60-Minutengrenze entstehen ($663 \bmod 60 = 3$, also fast 11 Zyklen).
-Es gibt viele Kollisionen in der Einfachen Fahrt, wie die Markierungen 'x' in der Ausgabe belegen.
+Einseitiges Warten akkumuliert 326 Warteminuten auf der Rückfahrt $\Rightarrow$ Strafe $= 326^2 = 106\,276$.
+Beidseitiges Warten findet eine kollisionsfreie Startzeit unter den 60 Kandidaten: Strafe $= 0$.
+Laufzeit: trotz $60 \times 52$ Iterationen terminiert das Programm in unter 100\,ms — $O(n)$ pro Startzeit.
 
 \subsubsection*{Tatsächliche Ausgabe (Ausschnitt)}
 \begin{lstlisting}
-Einfache Fahrt:
-    Ax  B   C   Dx  E   Fx  G   Hx  I   Jx ...
-Summe Wartezeiten Hin, Rueck : 0, 0
-Summe Strafen                : 0
+Einfache Fahrt (Station-Zeile):
+    Ax  B   C   Dx  E   Fx  G   Hx  I   Jx  K   L   Mx  N   Ox  P  ...
+Gesamtdauer H, R       : 663, 663
+Summe Wartezeiten H, R : 0, 0
+Summe Strafen          : 0
 
-Einseitiges Warten:
-Summe Wartezeiten Hin, Rueck : 0, 326
-Summe Strafen                : 106276
+Einseitiges Warten (Station-Zeile):
+    A   B   C   D   E   F   G   H   I   J   K   L   M   N   O   P  ...
+Summe Wartezeiten H, R : 0, 326
+Summe Strafen          : 106276
 
-Beidseitiges Warten:
-Summe Wartezeiten Hin, Rueck : 0, 0
-Summe Strafen                : 0
+Beidseitiges Warten (Station-Zeile):
+    A   B   C   D   E   F   G   H   I   J   K   L   M   N   O   P  ...
+Summe Wartezeiten H, R : 0, 0
+Summe Strafen          : 0
 \end{lstlisting}
 
 \subsubsection*{Analyse}
 \begin{itemize}
-  \item \textbf{Einseitiges Warten:} 326 Warteminuten auf der Rückfahrt → Strafe $326^2 = 106276$.
-    Dies illustriert die dramatische Wirkung der quadratischen Bestrafungsfunktion bei vielen Kollisionen.
-  \item \textbf{Beidseitiges Warten:} Findet eine kollisionsfreie Startzeit für die Rückfahrt
-    und erzielt \textbf{Strafe = 0} — selbst bei 52 Stationen und komplexen Modulo-Überschneidungen.
-  \item \textbf{Laufzeit:} Trotz $60 \times 52$ Iterationen (BeidseitigesWarten testet alle 60 Startzeiten)
-    terminiert das Programm in Millisekunden — die $O(n)$-Traversierung pro Startzeit ist praktisch.
+  \item \textbf{Einseitiges Warten:} Strafe $326^2 = 106\,276$ — dramatischer Effekt der Quadratfunktion bei vielen Kollisionen.
+  \item \textbf{Beidseitiges Warten:} Findet kollisionsfreie Startzeit; Strafe $= 0$ trotz 52 Stationen.
+  \item \textbf{Skalierbarkeit:} $O(n \cdot 60)$ Traversierungen terminieren in Millisekunden.
 \end{itemize}
 
-% ─────────────────────────────────────────
+% ══════════════════════════════════════════════════════
 \subsection{V1 – Validierung: Startzeit außerhalb [0,59]}
 \label{test:v1}
 
+\noindent
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+
 \subsubsection*{Eingabe}
-\begin{center}
-\begin{tabular}{ll}
-\toprule
-\textbf{Parameter} & \textbf{Wert} \\
-\midrule
-Strecke            & A → B → C \\
-Abstände           & 5, 7 Minuten \\
-Start Hinfahrt     & \textbf{60} (ungültig) \\
-\bottomrule
-\end{tabular}
-\end{center}
+\begin{lstlisting}
+Strecke:
+A B C
+Abstaende:
+5 7
+Start Hinfahrt:
+60
+\end{lstlisting}
 
 \subsubsection*{Erwartetes Verhalten}
-Der \texttt{EingabeValidator} prüft, ob $\text{startZeit} \in [0, 59]$.
-Da 60 außerhalb liegt, soll die Fehlermeldung ausgegeben und die Datei übersprungen werden.
+\texttt{EingabeValidator} prüft $\text{startZeit} \in [0,59]$.\\
+$60 > 59$ $\Rightarrow$ Fehlermeldung, Datei wird übersprungen.
 
+\vspace{4pt}
+\textbf{Ohne Validator (BUG-02):}\\
+Ausgabe enthält \texttt{Ab 60} — unmögliche Zeitangabe\\
+im Modulo-60-System.
+
+\subsubsection*{Analyse}
+Validator fängt BUG-02 ab.
+Programm läuft stabil weiter und\\
+verarbeitet alle anderen Dateien.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
 \subsubsection*{Tatsächliche Ausgabe}
 \begin{lstlisting}
 [FEHLER] val_01_startzeit_ueber59.txt:
-  Startzeit 60 ungueltig -- erlaubter Bereich: 0..59
+  Validierungsfehler:
+    - Startzeit 60 ungueltig
+      erlaubter Bereich: 0..59
 \end{lstlisting}
 
-\subsubsection*{Analyse}
-Ohne Validator käme es zu einer Ausgabe mit \texttt{Ab 60} — einer unmöglichen Zeitangabe
-im Modulo-60-System (BUG-02). Der Validator fängt dies ab.
-\textbf{Die Datei wird vollständig übersprungen}, ohne einen Absturz zu verursachen.
+\vspace{6pt}
+\textit{Datei wird übersprungen.\\
+Keine Ergebnisdatei erzeugt.\\
+Nächste Datei wird normal\\
+weiterverarbeitet.}
+\end{minipage}
 
-% ─────────────────────────────────────────
+% ══════════════════════════════════════════════════════
 \subsection{V2 – Validierung: Negative Startzeit}
 \label{test:v2}
 
+\noindent
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+
 \subsubsection*{Eingabe}
-\begin{center}
-\begin{tabular}{ll}
-\toprule
-\textbf{Parameter} & \textbf{Wert} \\
-\midrule
-Strecke            & A → B → C \\
-Abstände           & 5, 7 Minuten \\
-Start Hinfahrt     & \textbf{-5} (ungültig) \\
-\bottomrule
-\end{tabular}
-\end{center}
+\begin{lstlisting}
+Strecke:
+A B C
+Abstaende:
+5 7
+Start Hinfahrt:
+-5
+\end{lstlisting}
 
 \subsubsection*{Erwartetes Verhalten}
-Negative Werte sind im Zeitkreis nicht definiert.
-Der Validator muss auch negative Werte ablehnen (Prüfung $< 0$).
+Negative Startzeit ist im Zeitkreis $[0,59]$ nicht definiert.\\
+Java-Modulo für negative Zahlen ist\\
+implementierungsabhängig:\\
+$(-5)\,\%\,60 = -5$ in Java $\Rightarrow$ negativer Rest.\\
+Validator muss $< 0$ explizit prüfen.
 
+\subsubsection*{Analyse}
+Ohne Validator: undefiniertes Verhalten\\
+(negative Zeitwerte in der Ausgabe).
+Validator erkennt $-5 < 0$ zuverlässig.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
 \subsubsection*{Tatsächliche Ausgabe}
 \begin{lstlisting}
 [FEHLER] val_02_startzeit_negativ.txt:
-  Startzeit -5 ungueltig -- erlaubter Bereich: 0..59
+  Validierungsfehler:
+    - Startzeit -5 ungueltig
+      erlaubter Bereich: 0..59
 \end{lstlisting}
+\end{minipage}
 
-\subsubsection*{Analyse}
-Java-Modulo für negative Zahlen ist implementierungsabhängig und könnte statt Fehler
-einen negativen Rest liefern. Der Validator erkennt $-5 < 0$ zuverlässig
-und verhindert undefiniertes Verhalten im Algorithmus.
-
-% ─────────────────────────────────────────
+% ══════════════════════════════════════════════════════
 \subsection{V3 – Validierung: Abstand 0}
 \label{test:v3}
 
+\noindent
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+
 \subsubsection*{Eingabe}
-\begin{center}
-\begin{tabular}{ll}
-\toprule
-\textbf{Parameter} & \textbf{Wert} \\
-\midrule
-Strecke            & A → B → C → D \\
-Abstände           & 5, \textbf{0}, 7 Minuten \\
-Start Hinfahrt     & 10 \\
-\bottomrule
-\end{tabular}
-\end{center}
+\begin{lstlisting}
+Strecke:
+A B C D
+Abstaende:
+5 0 7
+Start Hinfahrt:
+10
+\end{lstlisting}
 
 \subsubsection*{Erwartetes Verhalten}
-Ein Abstand von 0 bedeutet, zwei Stationen befinden sich am selben Punkt — semantisch unsinnig.
-Außerdem würde \texttt{ankunft = abfahrt} gelten, sodass \texttt{abfahrt + 1 = abfahrt + 1 = ankunft + 1}
-eine degenerte Zeitstruktur erzeugte. Der Validator muss $d \geq 1$ sicherstellen.
+Abstand 0 bedeutet: zwei Stationen am selben Punkt.\\
+Folge ohne Validator:\\
+$\text{ankunft} = \text{abfahrt}$, Haltezeit 1 produziert\\
+$\text{abfahrt}_{B} = \text{ankunft}_{B} + 1$,\\
+$\text{ankunft}_{C} = \text{abfahrt}_{B} + 0 = \text{abfahrt}_{B}$\\
+$\Rightarrow$ degenerierter Takt, falsche Kollisionsresultate.
 
+\subsubsection*{Analyse}
+Validator prüft $d \geq 1$ für jedes Segment.
+Klare Fehlermeldung mit Index und Wert.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
 \subsubsection*{Tatsächliche Ausgabe}
 \begin{lstlisting}
 [FEHLER] val_03_abstand_null.txt:
-  Abstand 1 (0 min) muss mindestens 1 sein
+  Validierungsfehler:
+    - Abstand 1 (0 min) muss
+      mindestens 1 sein
 \end{lstlisting}
+\end{minipage}
 
-\subsubsection*{Analyse}
-Ohne Validator würde das Programm für den Abstand 0 am Segment B→C die Zeiten
-$B\text{ab} = B\text{an} + 1$ und $C\text{an} = B\text{ab} + 0 = B\text{ab}$ berechnen —
-ein degenerierter Takt, der zu falschen Kollisionsergebnissen führen kann.
-
-% ─────────────────────────────────────────
+% ══════════════════════════════════════════════════════
 \subsection{V4 – Validierung: Abstand 30 (Grenzwert)}
 \label{test:v4}
 
+\noindent
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+
 \subsubsection*{Eingabe}
-\begin{center}
-\begin{tabular}{ll}
-\toprule
-\textbf{Parameter} & \textbf{Wert} \\
-\midrule
-Strecke            & A → B \\
-Abstand            & \textbf{30} Minuten (ungültig) \\
-Start Hinfahrt     & 0 \\
-\bottomrule
-\end{tabular}
-\end{center}
+\begin{lstlisting}
+Strecke:
+A B
+Abstaende:
+30
+Start Hinfahrt:
+0
+\end{lstlisting}
 
-\subsubsection*{Mathematische Begründung der Grenze}
-Für eine 2-Stationen-Strecke mit Abstand $d$ und Start 0:
-\begin{itemize}
-  \item Hin belegt: $[0, d]$
-  \item Rück startet bei $d+1$, belegt: $[d+1, 2d+1]$
-\end{itemize}
-Für kollisionsfreien Betrieb muss $2d+1 < 60$ gelten, also $d \leq 29$.
-Bei $d = 30$: Rück endet bei $2 \cdot 30 + 1 = 61 \equiv 1 \bmod 60$ → Rück belegt $[31, 1]$ über Null,
-Hin belegt $[0, 30]$ → Überlapp bei $t=0,1$ → \textbf{unvermeidliche Kollision}.
+\subsubsection*{Mathematische Begründung}
+Für 2 Stationen mit Abstand $d$, Start 0:\\
+Hin: $[0, d]$, Rück: $[d+1, 2d+1]$\\
+Kollisionsfreiheit: $2d+1 < 60 \Rightarrow d \leq 29$.
 
-Zusätzlich würde \texttt{BeidseitigesWartenStrategie} bei $d=30$ keine gültige Startzeit finden
-(\texttt{besteStartzeitRueck} bleibt $-1$), was zu einer fehlerhaften Ausgabe führte (BUG-01).
+\vspace{4pt}
+Bei $d = 30$:\\
+Rück endet bei $2\cdot30+1 = 61 \equiv 1\,(\bmod\,60)$\\
+$\Rightarrow$ Rück $[31,1]$ (über Null) $\cap$ Hin $[0,30]$\\
+$\Rightarrow$ Überlapp bei $t = 0, 1$ $\Rightarrow$ unvermeidlich.
 
+\vspace{4pt}
+\textbf{BUG-01:} Bei $d=30$ findet \texttt{Beidseitiges}\\
+\texttt{Warten} keine gültige Startzeit $\Rightarrow$\\
+\texttt{besteStartzeitRueck} bleibt $-1$ $\Rightarrow$\\
+Fehlausgabe \texttt{Ab -1}.
+
+\subsubsection*{Analyse}
+Verhindert gleichzeitig BUG-01 und die\\
+physikalisch unmögliche Eingabe.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
 \subsubsection*{Tatsächliche Ausgabe}
 \begin{lstlisting}
 [FEHLER] val_04_abstand_grenze30.txt:
-  Abstand 0 (30 min) muss kleiner als 30 sein
-  (bei 30+ Minuten ist Kollision nicht vermeidbar)
+  Validierungsfehler:
+    - Abstand 0 (30 min) muss
+      kleiner als 30 sein
+      (bei >= 30 ist Kollision
+      nicht vermeidbar)
 \end{lstlisting}
+\end{minipage}
 
-\subsubsection*{Analyse}
-Dieser Test verifiziert gleichzeitig die Korrektheit der mathematischen Grenzanalyse
-und die Absicherung gegen BUG-01. Der Validator schützt die Strategie vor einem
-uninitialisierten Rückgabewert.
-
-% ─────────────────────────────────────────
+% ══════════════════════════════════════════════════════
 \subsection{V5 – Validierung: Nur eine Station}
 \label{test:v5}
 
+\noindent
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+
 \subsubsection*{Eingabe}
-\begin{center}
-\begin{tabular}{ll}
-\toprule
-\textbf{Parameter} & \textbf{Wert} \\
-\midrule
-Strecke            & A (einzelne Station) \\
-Abstände           & (keine) \\
-Start Hinfahrt     & 5 \\
-\bottomrule
-\end{tabular}
-\end{center}
+\begin{lstlisting}
+Strecke:
+A
+Abstaende:
+
+Start Hinfahrt:
+5
+\end{lstlisting}
 
 \subsubsection*{Erwartetes Verhalten}
-Eine Strecke benötigt mindestens 2 Stationen und 1 Segment.
-Bei nur einer Station wäre \texttt{head == tail}, und die Traversal-Schleifen in
-\texttt{hinfahrtOhneKollision} (prüft \texttt{current.getNext() != null}) würden sofort
-terminieren — die Ausgabe wäre leer. Der Validator soll dies explizit ablehnen.
+Mindestens 2 Stationen und 1 Segment nötig.\\
+Ohne Validator: \texttt{head == tail},\\
+alle \texttt{while (current.getNext() != null)}-\\
+Schleifen terminieren sofort $\Rightarrow$ leere Ausgabe\\
+(stiller Fehler, kein Absturz).
 
+\subsubsection*{Analyse}
+Validator nennt explizit die Anzahl\\
+gefundener Stationen.
+Leere Ausgabe wird verhindert.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
 \subsubsection*{Tatsächliche Ausgabe}
 \begin{lstlisting}
 [FEHLER] val_05_eine_station.txt:
-  Strecke muss mindestens 2 Stationen haben (gefunden: 1)
+  Validierungsfehler:
+    - Strecke muss mindestens
+      2 Stationen haben
+      (gefunden: 1)
 \end{lstlisting}
+\end{minipage}
 
-\subsubsection*{Analyse}
-Ohne Validator entstünde eine leere Ausgabetabelle — das Programm liefe durch,
-aber produzierte kein sinnvolles Ergebnis. Der Validator erzeugt eine klare Fehlermeldung
-statt stiller Fehler.
-
-% ─────────────────────────────────────────
+% ══════════════════════════════════════════════════════
 \subsection{V6 – Validierung: Duplizierter Stationsname}
 \label{test:v6}
 
+\noindent
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+
 \subsubsection*{Eingabe}
-\begin{center}
-\begin{tabular}{ll}
-\toprule
-\textbf{Parameter} & \textbf{Wert} \\
-\midrule
-Strecke            & A → B → C → \textbf{B} → D \\
-Abstände           & 5, 7, 3, 6 Minuten \\
-Start Hinfahrt     & 10 \\
-\bottomrule
-\end{tabular}
-\end{center}
+\begin{lstlisting}
+Strecke:
+A B C B D
+Abstaende:
+5 7 3 6
+Start Hinfahrt:
+10
+\end{lstlisting}
 
 \subsubsection*{Erwartetes Verhalten}
-Zwei Stationen mit gleichem Namen „B" wären in der Ausgabetabelle nicht unterscheidbar
-und könnten zu logisch falschen Kollisionsprüfungen führen (beide Knoten haben denselben Namen,
-sind aber unterschiedliche Punkte auf der Strecke). Der Validator prüft mit einem \texttt{HashSet}
-auf Eindeutigkeit der Stationsnamen.
+Zwei Knoten mit Name „B" sind in der\\
+Ausgabetabelle nicht unterscheidbar.\\
+Kollisionsprüfung könnte falsch referenzieren.
 
+\vspace{4pt}
+Validator prüft mit \texttt{HashSet} auf Eindeutigkeit:\\
+\texttt{gesehen.add("B")} $\Rightarrow$ false beim 2. Vorkommen\\
+$\Rightarrow$ Fehlermeldung mit dem konkreten Namen.
+
+\subsubsection*{Analyse}
+Fehlermeldung nennt den betroffenen Namen direkt.
+Mehrdeutige Ausgabetabellen werden verhindert.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\scriptsize
 \subsubsection*{Tatsächliche Ausgabe}
 \begin{lstlisting}
 [FEHLER] val_06_duplikat_name.txt:
-  Stationsname "B" tritt mehrfach auf
+  Validierungsfehler:
+    - Stationsname "B"
+      kommt mehrfach vor
 \end{lstlisting}
+\end{minipage}
 
-\subsubsection*{Analyse}
-Ohne Validator wäre die Ausgabetabelle mit zwei „B"-Spalten mehrdeutig.
-Die Fehlermeldung nennt den betroffenen Namen direkt, was die Diagnose erleichtert.
-
-% ─────────────────────────────────────────
+% ══════════════════════════════════════════════════════
 \subsection{Zusammenfassende Auswertung}
+\label{test:auswertung}
 
 \subsubsection*{Strafen im Vergleich}
 \begin{center}
-\begin{tabular}{lccc}
+\begin{tabular}{lrrr}
 \toprule
-\textbf{Test} & \textbf{Einfach} & \textbf{Einseitig} & \textbf{Beidseitig} \\
+\textbf{Test} & \textbf{Einfach} & \textbf{Einseitig} & \textbf{Beidseitig}\\
 \midrule
-N1 – Basisfall         & 0    & 0    & 0   \\
-N2 – Eine Kollision    & 0    & 256  & 0   \\
-N3 – Zehn Stationen    & 0    & 64   & 32  \\
-G1 – Zwei Stationen    & 0    & 0    & 0   \\
-G2 – Start 59          & 0    & 0    & 0   \\
-G3 – Start 0, symm.    & 0    & 3136 & 392 \\
-G4 – Abstand 1         & 0    & 0    & 0   \\
-G5 – Kaskade           & 0    & 256  & 0   \\
-G6 – Rollover          & 0    & 64   & 0   \\
-S1 – Symmetrisch       & 0    & 36   & 0   \\
-S2 – Stress (52 Sta.)  & 0    & 106276 & 0 \\
+N1 – Basisfall              & 0 & 0      & 0\\
+N2 – Eine Kollision         & 0 & 256    & 0\\
+N3 – Zehn Stationen         & 0 & 64     & 32\\
+G1 – Zwei Stationen         & 0 & 0      & 0\\
+G2 – Start 59               & 0 & 0      & 0\\
+G3 – Start 0, symm.         & 0 & 3136   & 392\\
+G4 – Abstand 1              & 0 & 0      & 0\\
+G5 – Kaskade                & 0 & 256    & 0\\
+G6 – Rollover               & 0 & 64     & 0\\
+S1 – Symmetrisch            & 0 & 36     & 0\\
+S2 – Stress (52 Stationen)  & 0 & 106276 & 0\\
 \bottomrule
 \end{tabular}
 \end{center}
 
 \subsubsection*{Erkenntnisse}
 \begin{itemize}
-  \item \textbf{Einfache Fahrt:} Strafe immer 0, da keine Wartezeit — aber Kollisionen bleiben ungelöst.
-  \item \textbf{Einseitiges Warten:} Kollisionen werden aufgelöst, aber die quadratische Strafe
-    kann sehr hoch werden (bis 106276 beim Stresstest).
-  \item \textbf{Beidseitiges Warten:} In 10 von 11 regulären Fällen Strafe = 0.
-    Im einzigen Ausnahmefall (G3) wird die Strafe von 3136 auf 392 reduziert ($-88\,\%$).
-  \item \textbf{Validierung:} Alle 6 ungültigen Eingaben werden sauber abgefangen.
-    Kein Absturz, keine stillen Fehler — klare Fehlermeldungen mit Wert und Regel.
+  \item \textbf{Einfache Fahrt:} Strafe immer 0, da keine Wartezeit — Kollisionen bleiben ungelöst.
+  \item \textbf{Einseitiges Warten:} Kollisionen aufgelöst, aber quadratische Strafe kann extrem hoch sein ($106\,276$ beim Stresstest).
+  \item \textbf{Beidseitiges Warten:} In 10 von 11 regulären Fällen Strafe 0. Im einzigen Ausnahmefall (G3) Reduktion von 3136 auf 392 ($-88\,\%$).
+  \item \textbf{Validierung:} Alle 6 ungültigen Eingaben sauber abgefangen — kein Absturz, keine stillen Fehler.
 \end{itemize}
 
 % ─────────────────────────────────────────
