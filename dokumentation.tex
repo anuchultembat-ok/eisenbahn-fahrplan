@@ -19,6 +19,7 @@
 \usepackage{float}
 \usepackage{mdframed}
 \usepackage{longtable}
+\usepackage{struktex}
 
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds, calc}
 
@@ -635,193 +636,152 @@ return new SimulationsDaten(bahnhofPlan, startZeit);
 \subsection{Eingabevalidierung (\texttt{EingabeValidator})}
 \label{sec:eingabevalidierung}
 
-Nachdem \texttt{EingabeLeser} die Rohdaten eingelesen und in ein \texttt{SimulationsDaten}-Objekt
-umgewandelt hat, prüft \texttt{EingabeValidator} die semantische Korrektheit
-\emph{bevor} eine einzige Strategie aufgerufen wird.
-Ungültige Dateien werden übersprungen; alle übrigen Dateien werden normal weiterverarbeitet.
+Nachdem \texttt{EingabeLeser} die Rohdaten in ein \texttt{SimulationsDaten}-Objekt
+umgewandelt hat, prüft \texttt{EingabeValidator} die \emph{semantische Korrektheit}
+der Eingabe --- bevor eine einzige Strategie ausgeführt wird.
+Alle gefundenen Fehler werden gesammelt und gemeinsam ausgegeben;
+ungültige Dateien werden vollständig übersprungen.
 
-\begin{lstlisting}[caption={Aufruf in Main.java}]
-List<String> fehler = EingabeValidator.validiere(daten);
-if (!fehler.isEmpty()) {
-    System.err.println("  Validierungsfehler in " + file.getName() + ":");
-    fehler.forEach(f -> System.err.println("    - " + f));
-    continue; // Datei ueberspringen, naechste Datei laden
-}
-\end{lstlisting}
+Die Validierungslogik ist vollständig sprachunabhängig und lässt sich
+als Nassi-Shneiderman-Struktogramm darstellen.
 
-\subsubsection*{Aufbau des Validators}
+% ──────────────────────────────────────────────────────────────────
+\subsubsection*{Gesamtablauf: \texttt{validiere()}}
 
-\begin{lstlisting}[caption={EingabeValidator -- Einstiegspunkt}]
-public static List<String> validiere(SimulationsDaten daten) {
-    List<String> fehler = new ArrayList<>();
-    validiereStartZeit(daten.startZeit(), fehler);
-    validierePlan(daten.plan(), fehler);
-    return fehler; // leer = gueltig
-}
-\end{lstlisting}
+Die zentrale Methode \texttt{validiere()} bündelt die Prüfarbeit:
+Sie legt zunächst eine leere Fehlerliste an, delegiert dann die
+eigentlichen Prüfungen an zwei Hilfsmethoden und gibt die Fehlerliste zurück.
+Ist sie am Ende \emph{leer}, gilt die Eingabe als gültig (\emph{Fail-Collect}-Prinzip ---
+kein früher Abbruch beim ersten Fehler, damit der Nutzer alle Probleme
+auf einmal sieht).
 
-Die Methode sammelt \emph{alle} Fehler in einer Liste — es wird kein früher Abbruch bei
-dem ersten Fehler vorgenommen (außer bei weniger als 2 Stationen, da dort keine
-sinnvolle Streckenprüfung möglich ist). So sieht der Benutzer auf einen Blick
-alle Probleme einer Datei.
+\begin{center}
+\begin{struktogramm}(100,30){validiere(daten : SimulationsDaten)}
+  \assign{fehler $\gets$ leere Fehlerliste erstellen}
+  \assign{validiereStartZeit(startZeit, fehler) aufrufen}
+  \assign{validierePlan(plan, fehler) aufrufen}
+  \assign{\textbf{return} fehler \quad \textit{(leer = Eingabe gültig)}}
+\end{struktogramm}
+\end{center}
 
-\subsubsection*{Regel V1 – Startzeit im Bereich {[}0, 59{]}}
+% ──────────────────────────────────────────────────────────────────
+\subsubsection*{Schritt 1 -- Startzeit prüfen (Regel V1)}
 
-\begin{lstlisting}[caption={Startzeit-Prüfung}]
-private static void validiereStartZeit(int startZeit, List<String> fehler) {
-    if (startZeit < 0 || startZeit > 59)
-        fehler.add("Startzeit " + startZeit
-                 + " ungueltig -- erlaubter Bereich: 0..59");
-}
-\end{lstlisting}
+Die Startzeit muss im Bereich $[0, 59]$ liegen, da das gesamte Zeitmodell
+auf Modulo-60 basiert.
+Werte außerhalb dieses Bereichs erzeugen ungültige Zeitangaben in der Ausgabe:
+$\text{startZeit} > 59$ führt zu Einträgen wie \texttt{Ab 60}~(BUG-02);
+$\text{startZeit} < 0$ erzeugt negative Zeitwerte.
 
-\textbf{Begründung:} Das gesamte Zeitmodell basiert auf Modulo 60.
-Alle Berechnungen nutzen \texttt{(wert + offset) \% 60}.
-\begin{itemize}
-  \item \textbf{startZeit $> 59$:} Java-Modulo liefert zwar keinen Fehler, aber die Ausgabe
-    enthält dann \texttt{Ab 60} oder \texttt{Ab 73} — Werte, die im Modulo-60-Kreis nicht
-    definiert sind (BUG-02).
-  \item \textbf{startZeit $< 0$:} Java berechnet $(-5) \% 60 = -5$ (negativer Rest), was zu
-    negativen Zeitangaben in der Ausgabe führt.
-\end{itemize}
+\begin{center}
+\begin{struktogramm}(100,18){validiereStartZeit(startZeit, fehler)}
+  \ifthenelse{50}{50}{startZeit $< 0$ \textbf{oder} startZeit $> 59$?}{Ja}{Nein}
+    \assign{Fehlermeldung „Startzeit ungültig -- Bereich 0..59" zur Liste hinzufügen}
+  \change
+    \assign[100]{\textit{(keine Aktion)}}
+  \ifend
+\end{struktogramm}
+\end{center}
 
 \begin{center}
 \begin{tabular}{lll}
 \toprule
-\textbf{Eingabe} & \textbf{Ergebnis ohne Validator} & \textbf{Ergebnis mit Validator} \\
+\textbf{Eingabe} & \textbf{Ohne Prüfung} & \textbf{Mit Prüfung (V1)} \\
 \midrule
-startZeit = 60  & \texttt{Ab 60} in der Ausgabe     & Fehlermeldung, Datei übersprungen \\
-startZeit = -5  & \texttt{Ab -5} in der Ausgabe     & Fehlermeldung, Datei übersprungen \\
-startZeit = 0   & korrekt                            & korrekt \\
-startZeit = 59  & korrekt                            & korrekt \\
+startZeit $= 60$  & \texttt{Ab 60} in der Ausgabe & Fehlermeldung, Datei übersprungen \\
+startZeit $= -5$  & \texttt{Ab -5} in der Ausgabe & Fehlermeldung, Datei übersprungen \\
+startZeit $= 0$   & korrekt & korrekt \\
+startZeit $= 59$  & korrekt & korrekt \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\subsubsection*{Regel V2 – Mindestens 2 Stationen}
+% ──────────────────────────────────────────────────────────────────
+\subsubsection*{Schritt 2 -- Streckenplan prüfen: Mindestgröße (Regel V2)}
 
-\begin{lstlisting}[caption={Mindestanzahl Stationen}]
-if (plan.getGroesse() < 2) {
-    fehler.add("Mindestens 2 Stationen erforderlich (gefunden: "
-             + plan.getGroesse() + ")");
-    return; // weitere Plan-Pruefungen sinnlos
-}
-\end{lstlisting}
-
-\textbf{Begründung:} Eine Strecke mit weniger als 2 Stationen hat kein Segment.
-Ohne Segment gibt es keine Hin- oder Rückfahrt.
-Mit nur einer Station wäre \texttt{head == tail}; alle
-\texttt{while (current.getNext() != null)}-Schleifen terminieren sofort
-und erzeugen eine leere Ausgabetabelle (stiller Fehler).
-
-Nach diesem Fehler wird \texttt{return} aufgerufen, da die nachfolgenden
-Abstandsprüfungen auf einem leeren Plan einen \texttt{NullPointerException} auslösen würden.
-
-\subsubsection*{Regel V3 – Stationsname nicht leer}
-
-\begin{lstlisting}[caption={Leerstring-Prüfung}]
-if (name == null || name.isBlank()) {
-    fehler.add("Stationsname an Position " + idx + " ist leer");
-}
-\end{lstlisting}
-
-\textbf{Begründung:} Ein leerer Name kann entstehen, wenn in der Eingabedatei
-doppelte Leerzeichen oder Tabulatoren stehen. \texttt{String.split("\\\\s+")} liefert
-dann einen Leer-String als Array-Element.
-In der Ausgabetabelle würde die leere Station unsichtbar erscheinen;
-die Kollisionsprüfung könnte fehlerhaft referenzieren.
-
-\subsubsection*{Regel V4 – Stationsnamen eindeutig}
-
-\begin{lstlisting}[caption={Duplikat-Prüfung mit HashSet}]
-Set<String> gesehen = new HashSet<>();
-// ...
-} else if (!gesehen.add(name)) {
-    fehler.add("Stationsname '" + name + "' kommt mehrfach vor");
-}
-\end{lstlisting}
-
-\textbf{Begründung:} \texttt{HashSet.add()} gibt \texttt{false} zurück, wenn das Element
-bereits vorhanden ist — ein eleganter O(1)-Duplikattest.
-
-Zwei Knoten mit gleichem Namen wären in der Ausgabetabelle nicht unterscheidbar.
-Außerdem könnte die Kollisionsprüfung semantisch falsche Ergebnisse liefern,
-da \texttt{isKollision()} auf den Zeitfeldern der Knoten operiert und nicht auf den Namen.
+Bevor die Knotenschleife beginnt, wird geprüft, ob mindestens zwei Stationen
+vorhanden sind. Eine Strecke mit weniger als 2 Stationen hat kein Segment ---
+Hin- und Rückfahrt sind nicht definiert. Außerdem würden nachfolgende
+Abstandsprüfungen auf einem leeren Plan einen Nullzugriff auslösen.
+Schlägt diese Prüfung an, wird \emph{sofort abgebrochen}.
 
 \begin{center}
-\begin{tabular}{lll}
-\toprule
-\textbf{Eingabe} & \textbf{Ausgabe ohne Validator} & \textbf{Mit Validator} \\
-\midrule
-\texttt{A B C B D} & zwei B-Spalten in Tabelle & Fehlermeldung: „B kommt mehrfach vor" \\
-\texttt{A B C}     & korrekt & korrekt \\
-\bottomrule
-\end{tabular}
+\begin{struktogramm}(100,15){validierePlan -- Phase 1: Mindestgröße}
+  \ifthenelse{50}{50}{Anzahl Stationen $< 2$?}{Ja}{Nein}
+    \assign{„Mindestens 2 Stationen erforderlich" $\to$ fehler; \textbf{return}}
+  \change
+    \assign[100]{weiter mit Schritt~3}
+  \ifend
+\end{struktogramm}
 \end{center}
 
-\subsubsection*{Regel V5 – Abstand mindestens 1 Minute}
+% ──────────────────────────────────────────────────────────────────
+\subsubsection*{Schritt 3 -- Streckenplan prüfen: Namens- und Abstandsregeln (Regeln V3--V6)}
 
-\begin{lstlisting}[caption={Mindestabstand-Prüfung}]
-if (d <= 0)
-    fehler.add("Abstand " + idx + " (" + d
-             + " min) muss mindestens 1 sein");
-\end{lstlisting}
+Die Hauptschleife durchläuft alle Knoten der verketteten Liste.
+Pro Knoten werden Stationsname (V3, V4) und -- falls ein Folgeknoten
+existiert -- der Abstand zum nächsten Bahnhof (V5, V6) geprüft.
 
-\textbf{Begründung:} Ein Abstand von 0 bedeutet, dass zwei Stationen
-denselben Punkt auf der Strecke belegen.
-Die Zeitberechnung degeneriert:
-\[
-  \text{ankunft}_{B} = \text{abfahrt}_{A} + 0 = \text{abfahrt}_{A}
-\]
-Hin und Rück haben dann exakt dieselben Zeitstempel auf dem Segment,
-was zwar stets als Kollision erkannt wird, aber semantisch unsinnig ist.
-Negative Abstände würden die Zeitberechnung rückwärts laufen lassen.
+\textbf{Namensvalidierung (V3, V4):}
 
-\subsubsection*{Regel V6 – Abstand kleiner als 30 Minuten}
+\begin{center}
+\begin{struktogramm}(100,35){validierePlan -- Namensregeln (pro Knoten)}
+  \while{aktueller Knoten $\neq$ \textbf{null}}
+    \ifthenelse{50}{50}{Name leer oder null? \textbf{(V3)}}{Ja}{Nein}
+      \assign{„Stationsname an Position $i$ ist leer" $\to$ fehler}
+    \change
+      \ifthenelse{50}{50}{Name bereits in Menge gesehen? \textbf{(V4)}}{Ja}{Nein}
+        \assign{„Stationsname mehrfach vorhanden" $\to$ fehler}
+      \change
+        \assign{Name zur Gesehen-Menge hinzufügen}
+      \ifend
+    \ifend
+    \assign{Abstandsprüfung (siehe unten); Knoten auf Nachfolger setzen}
+  \whileend
+\end{struktogramm}
+\end{center}
 
-\begin{lstlisting}[caption={Maximalabstand-Prüfung}]
-else if (d >= 30)
-    fehler.add("Abstand " + idx + " (" + d
-             + " min) muss kleiner als 30 sein"
-             + " -- bei Abstand >= 30 existiert keine"
-             + " kollisionsfreie Loesung");
-\end{lstlisting}
+Für die Duplikatprüfung (V4) wird eine \texttt{HashSet} eingesetzt:
+\texttt{HashSet.add()} gibt \texttt{false} zurück, wenn das Element bereits
+enthalten ist --- ein effizienter O(1)-Duplikattest ohne zusätzliche Schleife.
 
-\textbf{Mathematische Begründung:}
-Für eine 2-Stationen-Strecke mit Abstand $d$ und Startzeit 0 gilt:
+\textbf{Abstandsvalidierung (V5, V6):}
+
+\begin{center}
+\begin{struktogramm}(100,30){validierePlan -- Abstandsregeln (pro Knoten)}
+  \ifthenelse{50}{50}{Folgeknoten vorhanden?}{Ja}{Nein}
+    \ifthenelse{50}{50}{Abstand $d \leq 0$? \textbf{(V5)}}{Ja}{Nein}
+      \assign{„Abstand muss mindestens 1 min betragen" $\to$ fehler}
+    \change
+      \ifthenelse{50}{50}{Abstand $d \geq 30$? \textbf{(V6)}}{Ja}{Nein}
+        \assign{„Abstand $\geq$ 30 verboten -- keine kollisionsfreie Lösung" $\to$ fehler}
+      \change
+        \assign[100]{\textit{(korrekt, keine Aktion)}}
+      \ifend
+    \ifend
+  \change
+    \assign[100]{\textit{(letzter Knoten -- kein Abstand zu prüfen)}}
+  \ifend
+\end{struktogramm}
+\end{center}
+
+\textbf{Mathematische Begründung für V6:}
+Für eine 2-Stationen-Strecke mit Abstand $d$ und Startzeit~0 gilt:
 \begin{align*}
-  \text{Hin belegt:}  &\quad [0,\; d] \\
-  \text{Rück belegt:} &\quad [d+1,\; 2d+1]
+  \text{Hinfahrt belegt Segment:}  &\quad [0,\; d] \\
+  \text{Rückfahrt belegt Segment:} &\quad [d+1,\; 2d+1]
 \end{align*}
-Damit kein Überlapp entsteht, muss $2d+1 < 60$ gelten:
+Damit kein Überlapp entsteht, muss $2d + 1 < 60$:
 \[
   2d + 1 < 60 \;\Longrightarrow\; d \leq 29
 \]
-Bei $d = 30$ endet die Rückfahrt bei $2 \cdot 30 + 1 = 61 \equiv 1 \pmod{60}$,
-d.\,h. das Rückfahrt-Intervall lautet $[31, 1]$ (über die Stundengrenze).
-Dieses Intervall überschneidet sich mit dem Hinfahrt-Intervall $[0, 30]$
-bei $t = 0$ und $t = 1$ — eine unvermeidliche Kollision.
+Bei $d = 30$ ergibt sich $2 \cdot 30 + 1 = 61 \equiv 1 \pmod{60}$, das
+Rückfahrtintervall $[31, 1]$ überschneidet das Hinfahrtintervall $[0, 30]$
+bei $t = 0$ und $t = 1$ --- unvermeidliche Kollision. Die Regel schützt
+außerdem vor BUG-01: \texttt{BeidseitigesWartenStrategie} liefert sonst
+\texttt{besteStartzeitRueck = -1} und schreibt \texttt{Ab -1} in die Ausgabe.
 
-\textbf{Abgeleitete Schutzwirkung (BUG-01):}
-\texttt{BeidseitigesWartenStrategie} testet alle 60 möglichen Rückfahrt-Startzeiten.
-Findet sie keine gültige, bleibt \texttt{besteStartzeitRueck = -1}.
-Ein anschließender Aufruf \texttt{rueckfahrtMitKollision(plan, -1)} würde
-\texttt{Ab -1} in die Ausgabe schreiben. Der Validator verhindert diesen Fall
-vollständig, indem $d \geq 30$ abgelehnt wird.
-
-\begin{center}
-\begin{tabular}{cccc}
-\toprule
-\textbf{Abstand} & \textbf{Max. $2d+1$} & \textbf{Kollisionsfrei möglich?} & \textbf{Validator} \\
-\midrule
-$d = 1$  & 3   & Ja & akzeptiert \\
-$d = 29$ & 59  & Ja (knapp) & akzeptiert \\
-$d = 30$ & 61 $\equiv$ 1 & Nein & \textbf{abgelehnt} \\
-$d = 59$ & 119 $\equiv$ 59 & Nein & \textbf{abgelehnt} \\
-\bottomrule
-\end{tabular}
-\end{center}
-
+% ──────────────────────────────────────────────────────────────────
 \subsubsection*{Zusammenfassung aller Validierungsregeln}
 
 \begin{center}
@@ -829,12 +789,12 @@ $d = 59$ & 119 $\equiv$ 59 & Nein & \textbf{abgelehnt} \\
 \toprule
 \textbf{Nr.} & \textbf{Regel} & \textbf{Bedingung} & \textbf{Verhindert} \\
 \midrule
-V1 & Startzeit-Bereich  & $0 \leq \text{startZeit} \leq 59$ & BUG-02 (ungültige Zeitwerte) \\
-V2 & Mindest-Stationen  & $\geq 2$ Stationen                & Leere Ausgabe, NullPointer \\
-V3 & Name nicht leer    & kein Leer-/Null-String            & Unsichtbare Spalten \\
-V4 & Eindeutige Namen   & kein Duplikat                     & Mehrdeutige Tabelle \\
-V5 & Abstand $\geq 1$   & $d \geq 1$ für jedes Segment      & Degenerierte Zeitberechnung \\
-V6 & Abstand $< 30$     & $d \leq 29$ für jedes Segment     & BUG-01, unvermeidliche Kollision \\
+V1 & Startzeit-Bereich  & $0 \leq \text{startZeit} \leq 59$  & BUG-02 (ungültige Zeitwerte) \\
+V2 & Mindest-Stationen  & $\geq 2$ Stationen                  & Leere Ausgabe, Nullzugriff \\
+V3 & Name nicht leer    & kein Leer- oder Null-String         & Unsichtbare Tabellenspalten \\
+V4 & Eindeutige Namen   & kein Duplikat (HashSet)             & Mehrdeutige Ausgabetabelle \\
+V5 & Abstand $\geq 1$   & $d \geq 1$ für jedes Segment        & Degenerierte Zeitberechnung \\
+V6 & Abstand $< 30$     & $d \leq 29$ für jedes Segment       & BUG-01, unvermeidliche Kollision \\
 \bottomrule
 \end{tabular}
 \end{center}
