@@ -3,17 +3,17 @@ package de.matse.ihk.model;
 import java.util.List;
 
 /**
- * The doubly linked list of stations representing one railway route.
- * Provides builder methods ({@link #addBahnhof}, {@link #setAbstaende}),
- * a {@link #reset()} to clear computed times between strategy runs,
- * and a deep-copy constructor.
+ * Die doppelt verkettete Liste der Bahnhöfe einer Eisenbahnstrecke.
+ * Bietet Aufbaumethoden ({@link #addBahnhof}, {@link #setAbstaende}),
+ * ein {@link #reset()} zum Zurücksetzen berechneter Zeiten zwischen Strategieläufen
+ * sowie einen Kopierkonstruktor.
  */
 public class BahnhofPlan {
     private BahnhofNode head;
     private BahnhofNode tail;
     private int groesse = 0;
 
-    /** Appends a new station with the given name at the end of the list. */
+    /** Hängt einen neuen Bahnhof mit dem angegebenen Namen ans Ende der Liste. */
     public void addBahnhof(String name) {
         BahnhofNode newNode = new BahnhofNode(name);
         if(head == null){
@@ -29,9 +29,9 @@ public class BahnhofPlan {
     public BahnhofPlan() {}
 
     /**
-     * Assigns travel times to segments in list order.
-     * {@code abstaende[i]} is set on the node at position {@code i};
-     * the last node is skipped because it has no outgoing segment.
+     * Weist den Segmenten die Fahrtzeiten in Listenreihenfolge zu.
+     * {@code abstaende[i]} wird dem Knoten an Position {@code i} zugewiesen;
+     * der letzte Knoten wird übersprungen, da er kein ausgehendes Segment hat.
      */
     public void setAbstaende(int[] abstaende) {
         BahnhofNode current = head; 
@@ -56,7 +56,7 @@ public class BahnhofPlan {
         return groesse;
     }
 
-/** Clears all computed time fields so the same plan object can be reused by the next strategy. */
+/** Setzt alle berechneten Zeitfelder zurück, damit dasselbe Plan-Objekt von der nächsten Strategie wiederverwendet werden kann. */
 public void reset() {
     BahnhofNode current = this.head;
     while (current.getNext() != null) {

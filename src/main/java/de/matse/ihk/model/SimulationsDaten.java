@@ -1,8 +1,9 @@
 package de.matse.ihk.model;
 
 /**
- * Immutable container that bundles a parsed {@link BahnhofPlan} with the forward-journey
- * departure time. Returned by {@code EingabeLeser} and passed down to the strategies.
+ * Unveränderlicher Behälter, der einen eingelesenen {@link BahnhofPlan} mit der
+ * Abfahrtszeit der Hinfahrt bündelt. Wird von {@code EingabeLeser} zurückgegeben
+ * und an die Strategien weitergereicht.
  */
 public record SimulationsDaten(BahnhofPlan plan, int startZeit) {
 }

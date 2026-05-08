@@ -4,9 +4,9 @@ import de.matse.ihk.model.BahnhofNode;
 import de.matse.ihk.model.BahnhofPlan;
 
 /**
- * Finds the return-journey start time with the lowest penalty by trying all 60 options,
- * then splits any remaining waiting time equally between both directions.
- * Penalty = (Σ wartezeitHin)² + (Σ wartezeitRueck)².
+ * Sucht die Rückfahrt-Startzeit mit der geringsten Strafe durch Testen aller 60 Möglichkeiten
+ * und verteilt verbleibende Wartezeit gleichmäßig auf beide Richtungen.
+ * Strafe = (Σ wartezeitHin)² + (Σ wartezeitRueck)².
  */
 public class BeidseitigesWartenStrategie extends FahrplanStrategie {
 
@@ -17,9 +17,9 @@ public class BeidseitigesWartenStrategie extends FahrplanStrategie {
     public String getStrategieName() { return "Beidseitiges Warten"; }
 
     /**
-     * Exhaustive search over all 60 return start times; skips candidates where the
-     * second-to-last segment still has a collision. Applies {@link #beidseitigesWarten}
-     * when the best start time is non-zero (i.e. waiting time is unavoidable).
+     * Vollständige Suche über alle 60 Rückfahrt-Startzeiten; überspringt Kandidaten,
+     * bei denen das vorletzte Segment noch eine Kollision hat. Wendet {@link #beidseitigesWarten}
+     * an, wenn die beste Startzeit ungleich null ist (d.h. Wartezeit unvermeidbar).
      */
     @Override
     public void berechneFahrplan(BahnhofPlan plan, int startZeitHin) {
@@ -40,7 +40,7 @@ public class BeidseitigesWartenStrategie extends FahrplanStrategie {
         }
     }
 
-    /** Returns (Σ wartezeitHin)² + (Σ wartezeitRueck)². */
+    /** Gibt (Σ wartezeitHin)² + (Σ wartezeitRueck)² zurück. */
     @Override
     public int getSummeStrafen() {
         int hinSumme = 0, rueckSumme = 0;
