@@ -1,0 +1,775 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[ngerman]{babel}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{tcolorbox}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{amsmath}
+\usepackage{mdframed}
+\usepackage{multirow}
+
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, fit, backgrounds}
+
+\geometry{margin=2.5cm}
+
+\hypersetup{colorlinks=true, linkcolor=blue!60!black}
+
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{codeframe}{RGB}{200,200,200}
+\definecolor{javakw}{RGB}{0,0,200}
+\definecolor{javastr}{RGB}{0,128,0}
+\definecolor{javacomment}{RGB}{128,128,128}
+\definecolor{passgreen}{RGB}{0,140,0}
+\definecolor{failred}{RGB}{180,0,0}
+\definecolor{warnorng}{RGB}{200,100,0}
+
+\lstset{
+    language=Java,
+    backgroundcolor=\color{codebg},
+    frame=single,
+    rulecolor=\color{codeframe},
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{javakw}\bfseries,
+    stringstyle=\color{javastr},
+    commentstyle=\color{javacomment}\itshape,
+    breaklines=true,
+    showstringspaces=false,
+    tabsize=4,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=8pt,
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Eisenbahn-Fahrplan -- Entwicklerbuch}
+\lhead{IHK Abschlussprojekt}
+\rfoot{Seite \thepage}
+
+\tcbuselibrary{skins, breakable}
+
+\newtcolorbox{infobox}[1][]{
+    colback=blue!5, colframe=blue!40!black, fonttitle=\bfseries, #1
+}
+\newtcolorbox{warnbox}[1][]{
+    colback=red!5, colframe=red!60!black, fonttitle=\bfseries, title=Achtung, #1
+}
+\newtcolorbox{bugbox}[1][]{
+    colback=yellow!10, colframe=orange!70!black, fonttitle=\bfseries, title=Bekannter Bug, #1
+}
+\newtcolorbox{designbox}[1][]{
+    colback=green!5, colframe=green!50!black, fonttitle=\bfseries, title=Designentscheidung, #1
+}
+
+\newcommand{\pass}{\textcolor{passgreen}{\textbf{OK}}}
+\newcommand{\fail}{\textcolor{failred}{\textbf{FAIL}}}
+\newcommand{\warn}{\textcolor{warnorng}{\textbf{WARN}}}
+
+% ─────────────────────────────────────────
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    {\Huge\bfseries Eisenbahn-Fahrplan Simulation\par}
+    \vspace{0.5cm}
+    {\Large Entwicklerbuch\par}
+    \vspace{2cm}
+    \rule{\linewidth}{0.4pt}\\[0.5cm]
+    {\large IHK Abschlussprojekt -- MATSE\par}
+    \rule{\linewidth}{0.4pt}
+    \vspace{2cm}
+    {\large\itshape Technisches Referenzhandbuch für Entwickler:\\
+    Architektur, Erweiterbarkeit, Testdokumentation\\
+    und bekannte Einschränkungen\par}
+    \vfill
+    {\large Version 1.0 \quad 2026\par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ─────────────────────────────────────────
+\section{Projektübersicht}
+
+\subsection{Technische Eckdaten}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Eigenschaft} & \textbf{Wert} \\
+\midrule
+Sprache & Java 17 \\
+Build-System & Apache Maven 3.x \\
+Gruppe/Artefakt & \texttt{de.matse.ihk / eisenbahn-fahrplan} \\
+Version & 1.0-SNAPSHOT \\
+Einstiegspunkt & \texttt{de.matse.ihk.Main} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Paketstruktur}
+
+\begin{center}
+\begin{tabular}{lp{9cm}}
+\toprule
+\textbf{Paket} & \textbf{Inhalt} \\
+\midrule
+\texttt{de.matse.ihk} & \texttt{Main.java} -- Einstiegspunkt, orchestriert den gesamten Ablauf \\
+\texttt{de.matse.ihk.model} & Datenmodell: \texttt{BahnhofNode}, \texttt{BahnhofPlan}, \texttt{SimulationsDaten} \\
+\texttt{de.matse.ihk.strategie} & Abstrakte Basis und drei konkrete Strategien \\
+\texttt{de.matse.ihk.io} & Ein- und Ausgabe: \texttt{EingabeLeser}, \texttt{AusgabeManager} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Abhängigkeiten}
+
+Das Projekt verwendet \textbf{keine externen Bibliotheken}. Alle benötigten Klassen stammen aus der Java-Standardbibliothek (JDK 17):
+
+\begin{itemize}
+    \item \texttt{java.nio.file.Files} / \texttt{Path} -- Datei einlesen
+    \item \texttt{java.io.BufferedWriter} / \texttt{FileWriter} -- Datei schreiben
+    \item \texttt{java.util.List} -- Zeilenliste beim Einlesen
+    \item \texttt{java.util.function.Function} -- Lambda in \texttt{printRow()}
+\end{itemize}
+
+% ─────────────────────────────────────────
+\section{Architektur}
+
+\subsection{Schichtentrennung}
+
+Das Programm ist in drei Schichten aufgeteilt:
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    layer/.style={draw, rounded corners, minimum width=10cm, minimum height=1cm,
+                  font=\small, text centered},
+]
+\node[layer, fill=blue!15]  (io)    at (0,0)   {\textbf{I/O-Schicht}: EingabeLeser, AusgabeManager};
+\node[layer, fill=green!15] (logic) at (0,-1.5) {\textbf{Logik-Schicht}: FahrplanStrategie + 3 Strategien};
+\node[layer, fill=yellow!20] (model) at (0,-3)  {\textbf{Modell-Schicht}: BahnhofPlan, BahnhofNode, SimulationsDaten};
+\draw[-Stealth, thick] (io) -- (logic) node[midway, right] {\small übergibt BahnhofPlan};
+\draw[-Stealth, thick] (logic) -- (model) node[midway, right] {\small liest/schreibt Knoten};
+\end{tikzpicture}
+\caption{Dreischichtige Architektur des Programms}
+\end{figure}
+
+\begin{itemize}
+    \item Die \textbf{I/O-Schicht} kümmert sich ausschließlich um das Lesen von Dateien und das Formatieren/Speichern der Ausgabe.
+    \item Die \textbf{Logik-Schicht} enthält die Berechnungsalgorithmen. Sie darf \texttt{BahnhofPlan}-Objekte verändern, kennt aber keine Dateien.
+    \item Die \textbf{Modell-Schicht} hält nur Daten und kennt keine Algorithmen (außer der lokalen Kollisionsprüfung, die direkt am Datenelement hängt).
+\end{itemize}
+
+\subsection{Datenfluss}
+
+\begin{enumerate}
+    \item \texttt{Main} ruft \texttt{EingabeLeser.leseDatei()} auf und erhält ein \texttt{SimulationsDaten}-Objekt.
+    \item \texttt{Main} übergibt dasselbe \texttt{BahnhofPlan}-Objekt nacheinander an alle drei Strategien.
+    \item Jede Strategie schreibt ihre Ergebnisse direkt in die \texttt{BahnhofNode}-Knoten.
+    \item \texttt{AusgabeManager} liest die Knoten aus und formatiert die Ausgabe.
+    \item \texttt{Main} sammelt alle Ausgaben und übergibt sie an \texttt{AusgabeManager.speicherErgebnis()}.
+\end{enumerate}
+
+\subsection{Geteilte Objektreferenz}
+
+\begin{designbox}
+Alle drei Strategien arbeiten auf \textbf{demselben} \texttt{BahnhofPlan}-Objekt -- es wird keine Kopie erstellt. Die Hinfahrtdaten werden von \texttt{EinfacheFahrtStrategie} gesetzt und von den nachfolgenden Strategien direkt gelesen.
+\end{designbox}
+
+Dies ist möglich, weil:
+\begin{itemize}
+    \item Strategien 2 und 3 die Hinfahrtdaten (\texttt{ankunfthin}, \texttt{abfahrthin}) \emph{nicht} verändern -- sie lesen diese nur.
+    \item Jede Strategie überschreibt die Rückfahrtdaten (\texttt{ankunftrueck}, \texttt{abfahrtrueck}, \texttt{wartezeitRueck}), sodass die Ausgabe immer den aktuellen Stand widerspiegelt.
+\end{itemize}
+
+% ─────────────────────────────────────────
+\section{Erweiterungspunkte}
+
+\subsection{Neue Strategie hinzufügen}
+
+Das Strategy Pattern macht das Hinzufügen einer neuen Strategie einfach. Folgende Schritte sind nötig:
+
+\textbf{Schritt 1}: Neue Klasse im Paket \texttt{de.matse.ihk.strategie} anlegen:
+
+\begin{lstlisting}[caption={Neue Strategie -- Grundstruktur}]
+package de.matse.ihk.strategie;
+import de.matse.ihk.model.BahnhofPlan;
+
+public class MeineNeueStrategie extends FahrplanStrategie {
+
+    @Override
+    public String getStrategieName() {
+        return "Meine neue Strategie";
+    }
+
+    @Override
+    public void berechneFahrplan(BahnhofPlan plan, int startZeit) {
+        this.aktuellerPlan = plan;
+        // Hinfahrt aus Strategie 1 ist bereits berechnet (gemeinsame Referenz)
+        // Eigene Logik hier implementieren, z.B.:
+        rueckfahrtMitKollision(aktuellerPlan, startZeit);
+    }
+
+    @Override
+    public int getSummeStrafen() {
+        // Strafberechnung implementieren
+        return 0;
+    }
+
+    @Override
+    public int getSummeWarteZeit() {
+        return 0;
+    }
+}
+\end{lstlisting}
+
+\textbf{Schritt 2}: Strategie in \texttt{Main.java} registrieren:
+
+\begin{lstlisting}
+FahrplanStrategie[] strategien = {
+    new EinfacheFahrtStrategie(),
+    new EinseitigesWartenStrategie(),
+    new BeidseitigesWartenStrategie(),
+    new MeineNeueStrategie()   // <-- hier hinzufuegen
+};
+\end{lstlisting}
+
+Kein weiterer Code muss geändert werden -- der Rest des Programms behandelt die neue Strategie automatisch gleich wie die bestehenden.
+
+\subsection{Verfügbare Hilfsmethoden}
+
+Alle Hilfsmethoden sind als \texttt{static}-Methoden in \texttt{FahrplanStrategie} definiert und stehen jeder abgeleiteten Klasse zur Verfügung:
+
+\begin{center}
+\begin{tabular}{lp{8.5cm}}
+\toprule
+\textbf{Methode} & \textbf{Beschreibung} \\
+\midrule
+\texttt{hinfahrtOhneKollision(plan, start)} & Berechnet Hinfahrt ohne Wartezeiten \\
+\texttt{rueckfahrtOhneKollision(plan, start)} & Berechnet Rückfahrt ohne Wartezeiten \\
+\texttt{hinfahrtMitKollision(plan, start)} & Berechnet Hinfahrt mit bestehenden Wartezeiten \\
+\texttt{rueckfahrtMitKollision(plan, start)} & Berechnet Rückfahrt und behandelt Kollisionen \\
+\texttt{beidseitigesWarten(plan, startHin)} & Verteilt Wartezeit hälftig auf Hin/Rück \\
+\texttt{warteZeitHinReset(plan)} & Setzt alle \texttt{wartezeitHin} auf 0 \\
+\texttt{warteZeitRueckReset(plan)} & Setzt alle \texttt{wartezeitRueck} auf 0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Neues Eingabeformat unterstützen}
+
+Um ein weiteres Dateiformat zu unterstützen, genügt es, eine neue statische Methode in \texttt{EingabeLeser} hinzuzufügen (oder eine neue Klasse zu erstellen), die ebenfalls ein \texttt{SimulationsDaten}-Objekt zurückgibt. \texttt{Main} muss dann nur die passende Methode aufrufen.
+
+% ─────────────────────────────────────────
+\section{Testdokumentation}
+
+\subsection{Überblick und Testkategorien}
+
+Die Testfälle im Verzeichnis \texttt{testfaelle/} decken folgende Kategorien ab:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Kategorie} & \textbf{Testdateien} & \textbf{Zweck} \\
+\midrule
+Normalfälle & \texttt{Beispiel1--3}, \texttt{01--03} & Typische Eingaben, Korrektheit der Basislogik \\
+Grenztests & \texttt{04--07b}, \texttt{09}, \texttt{11}, \texttt{12} & Randwerte und Extremfälle \\
+Fehlertests & \texttt{06}, \texttt{07b} & Ungültige / problematische Eingaben \\
+Stresstests & \texttt{00}, \texttt{08}, \texttt{10}, \texttt{13} & Viele Bahnhöfe, viele Kollisionen \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Jeder Testfall wird mit dem Programm ausgeführt. Das erwartete Ergebnis ist im jeweiligen Abschnitt beschrieben. Die tatsächliche Ausgabe liegt in \texttt{ausgabe/<dateiname>\_ergebnis.txt}.
+
+% ─────────────────────────────────────────
+\subsection{Normalfälle}
+
+\subsubsection{Test N1 -- Beispiel1: Keine Kollision (3 Bahnhöfe)}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Datei} & \texttt{Beispiel1.txt} \\
+\textbf{Strecke} & A B C, Abstände: 5 7, Start: 17 \\
+\textbf{Ziel} & Grundfunktion: Hin- und Rückfahrt ohne Kollision \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Erwartetes Verhalten}: Keine Kollision, alle drei Strategien liefern identische Ergebnisse. Gesamtdauer = 13 (5+7+1 Haltezeit), Strafe = 0.
+
+\begin{lstlisting}[caption={Erwartete Ausgabe N1}]
+Einfache Fahrt:
+An     22  30
+Ab 17  23  31
+    A   B   C
+Ab 45  39  31
+An 44  38
+Gesamtdauer Hinfahrt, Rueckfahrt       : 13, 13
+Summe Strafen                          : 0
+\end{lstlisting}
+
+\textbf{Status}: \pass{} -- Ausgabe wie erwartet.
+
+\subsubsection{Test N2 -- Beispiel2: Eine Kollision (7 Bahnhöfe)}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Datei} & \texttt{Beispiel2.txt} \\
+\textbf{Strecke} & A B C D E F G, Abstände: 5 8 6 7 3 2, Start: 17 \\
+\textbf{Ziel} & Kollisionserkennung und Wartezeit-Behandlung \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Erwartetes Verhalten}:
+\begin{itemize}
+    \item \textbf{Einfache Fahrt}: Kollision B$\to$C erkannt (\texttt{Bx}), Strafe = 0
+    \item \textbf{Einseitiges Warten}: C wartet 16 Min (Rück), Strafe = $16^2 = 256$
+    \item \textbf{Beidseitiges Warten}: Rückfahrt startet bei Min 10 -- keine Kollision, Strafe = 0
+\end{itemize}
+
+\textbf{Status}: \pass{} -- Alle drei Strategien korrekt.
+
+\subsubsection{Test N3 -- Beispiel3: Zehn Bahnhöfe}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Datei} & \texttt{Beispiel3.txt} \\
+\textbf{Strecke} & A--J (10 Bahnhöfe), Abstände: 12 8 14 3 5 21 13 6 8, Start: 17 \\
+\textbf{Ziel} & Korrekte Funktion bei größerer Streckenlänge \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Status}: \pass{} -- Kollisionen an A und D erkannt, korrekt behandelt.
+
+% ─────────────────────────────────────────
+\subsection{Grenztests}
+
+\subsubsection{Test G1 -- Minimale Strecke: Zwei Bahnhöfe}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Datei} & \texttt{04\_grenz\_zweiStationen.txt} \\
+\textbf{Strecke} & A B, Abstand: 29, Start: 0 \\
+\textbf{Ziel} & Minimalkonfiguration: nur ein Streckenabschnitt \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Erwartetes Verhalten}: Bei Abstand 29 fährt der Hinzug A:00, B:29. Rückzug startet B:30, A:59. Kein Überlapp zwischen Hin [0,29] und Rück [30,59]. Keine Kollision.
+
+\begin{lstlisting}[caption={Ausgabe G1}]
+Einfache Fahrt:
+An     29       Ab 00  30
+Ab 00  30   A   B   Ab 00  30
+An 59            An 59
+Gesamtdauer Hinfahrt, Rueckfahrt       : 29, 29
+Summe Strafen                          : 0
+\end{lstlisting}
+
+\textbf{Status}: \pass{} -- Kein Absturz bei Minimalstrecke, Ergebnis korrekt.
+
+\subsubsection{Test G2 -- Startzeit am Maximalwert: Start = 59}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Datei} & \texttt{05\_grenz\_startzeit59\_wraparound.txt} \\
+\textbf{Strecke} & A B C, Abstände: 5 7, Start: 59 \\
+\textbf{Ziel} & Korrekte Modulo-60-Behandlung beim Stundenwechsel \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Erwartetes Verhalten}: Der Hinzug fährt A:59 ab. Bereits nach 5 Minuten ist er bei B: $(59 + 5) \bmod 60 = 4$. Der Übergang von Minute 59 auf Minute 4 (über Minute 0) muss korrekt berechnet werden.
+
+\begin{lstlisting}[caption={Ausgabe G2 -- Wrap-around bei Minute 0}]
+Einfache Fahrt:
+An     04  12
+Ab 59  05  13
+    A   B   C
+Ab 27  21  13
+An 26  20
+Gesamtdauer Hinfahrt, Rueckfahrt       : 13, 13
+Summe Strafen                          : 0
+\end{lstlisting}
+
+\textbf{Überprüfung}: $59 + 5 = 64 \equiv 4 \pmod{60}$ \checkmark. Keine Kollision, da die Züge zeitlich versetzt sind.
+
+\textbf{Status}: \pass{} -- Stundenwechsel wird korrekt mit Modulo 60 behandelt.
+
+\subsubsection{Test G3 -- Startzeit am Minimalwert: Start = 0}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Datei} & \texttt{09\_grenz\_startzeit0.txt} \\
+\textbf{Strecke} & A B C D, Abstände: 15 15 15, Start: 0 \\
+\textbf{Ziel} & Start bei Minute 0 (kein Sonderfall, aber Grenzwert) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Erwartetes Verhalten}: Hin: A:0, B:15/16, C:31/32, D:47. Rück: D:48, C:03/04, B:19/20, A:35. Kollisionsprüfung: B$\to$C Hin [16,31], Rück [04,19] -- Überlapp bei t=16..19 $\Rightarrow$ Kollision!
+
+\textbf{Status}: \pass{} -- Kollision erkannt und korrekt behandelt.
+
+\subsubsection{Test G4 -- Rollover über Mitternacht: Start = 55}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Datei} & \texttt{11\_rollover\_mitternacht.txt} \\
+\textbf{Strecke} & A B C, Abstände: 25 25, Start: 55 \\
+\textbf{Ziel} & Beide Züge queren mehrfach den Stundenwechsel \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Berechnung Hinfahrt}:
+\begin{align*}
+    A &\xrightarrow{25} B: (55+25)\bmod60 = 20 \quad \text{Ab: 21} \\
+    B &\xrightarrow{25} C: (21+25)\bmod60 = 46
+\end{align*}
+
+\textbf{Kollisionsprüfung A$\to$B}: Hin [55, 20] (über Stundenwechsel!), Rück berechnet. Die \texttt{isTimeInInterval}-Methode muss den Wrap-around erkennen.
+
+\begin{lstlisting}[caption={Ausgabe G4 -- Einfache Fahrt}]
+An     20  46
+Ab 55  21  47
+    Ax  B   C
+Ab 39  13  47
+An 38  12
+Gesamtdauer Hinfahrt, Rueckfahrt       : 51, 51
+Summe Strafen                          : 0
+\end{lstlisting}
+
+Kollision auf A$\to$B erkannt. Intervall Hin: $[55, 20]$ (über Null), Rück: $[13, 38]$ -- Überlapp bei $t \in \{13,..,20\}$.
+
+\textbf{Status}: \pass{} -- Wrap-around-Kollision korrekt erkannt.
+
+\subsubsection{Test G5 -- Minimaler Abstand: 1 Minute}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Datei} & \texttt{12\_minimalAbstand1.txt} \\
+\textbf{Strecke} & A B C D E F, Abstände: 1 1 1 1 1, Start: 0 \\
+\textbf{Ziel} & Sehr kurze Abschnitte -- kein Off-by-One-Fehler \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Erwartetes Verhalten}: Hin: A:0, B:1/2, C:3/4, D:5/6, E:7/8, F:9. Rückfahrt direkt danach ab Min 10. Bei Abstand 1 sind die Zeitfenster der einzelnen Abschnitte extrem kurz -- kein Überlapp möglich, da die Züge zeitlich genügend versetzt sind.
+
+\textbf{Status}: \pass{} -- Kein Off-by-One, keine Kollision, Ausgabe korrekt.
+
+\subsubsection{Test G6 -- Erzwungene Kollision: Abstand = 29}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Datei} & \texttt{07\_grenz\_erzwungeneKollision.txt} \\
+\textbf{Strecke} & A B, Abstand: 29, Start: 0 \\
+\textbf{Ziel} & Identisch zu G1 -- sicherstellen dass kein Grenzproblem \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Bei Abstand 29: Hin [0,29], Rück [30, 59] -- die Intervalle berühren sich genau bei den Grenzen, überlappen sich aber nicht. Dies ist der engste Fall ohne Kollision.
+
+\textbf{Status}: \pass{} -- korrekt, keine Kollision.
+
+% ─────────────────────────────────────────
+\subsection{Fehlertests und problematische Eingaben}
+
+\subsubsection{Test F1 -- Startzeit über 60 (ungültige Eingabe)}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Datei} & \texttt{06\_grenz\_startzeit\_ueber60.txt} \\
+\textbf{Strecke} & A B C, Abstände: 5 7, Start: \textbf{73} \\
+\textbf{Ziel} & Verhalten bei ungültiger Startzeit \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Beobachtetes Verhalten}: Das Programm normalisiert die Startzeit \textbf{nicht}. Der Wert 73 wird direkt in die Berechnung eingegeben. Da alle nachfolgenden Operationen mit \texttt{(x + dist) \% 60} arbeiten, funktioniert die Berechnung trotzdem konsistent:
+
+\begin{lstlisting}[caption={Ausgabe F1 -- Startzeit 73 nicht normalisiert}]
+Ab 73  19  27        <- Abfahrt A = 73 (!) unveraendert
+An     18  26        <- (73+5)%60 = 18  korrekt
+\end{lstlisting}
+
+\textbf{Problem}: In der Ausgabe erscheint der Wert \texttt{73}, der im Stundenmodell (0--59) keinen definierten Zeitpunkt darstellt. Ein Benutzer, der die Ausgabe liest, könnte verwirrt sein.
+
+\begin{warnbox}
+Das Programm wirft \textbf{keine Ausnahme} und \textbf{stürzt nicht ab}. Die Ausgabe ist intern konsistent, aber der angezeigte Startzeitwert 73 ist irreführend. Eingaben sollten stets im Bereich 0--59 liegen.
+\end{warnbox}
+
+\textbf{Status}: \warn{} -- Programm läuft weiter, Ausgabe inkonsistent (kein Absturz, aber unerwartet).
+
+\textbf{Empfehlung}: In \texttt{EingabeLeser.leseDatei()} eine Normalisierung hinzufügen:
+\begin{lstlisting}
+startZeit = Integer.parseInt(zeilen.get(i + 1).trim()) % 60;
+\end{lstlisting}
+
+\subsubsection{Test F2 -- Abstand genau 30 (permanente Kollision)}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Datei} & \texttt{07b\_abstand30\_kollision.txt} \\
+\textbf{Strecke} & A B, Abstand: \textbf{30}, Start: 0 \\
+\textbf{Ziel} & Verhalten wenn keine kollisionsfreie Lösung existiert \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Analyse}: Bei Abstand 30 und Start 0:
+\begin{align*}
+\text{Hinfahrt: } & A \xrightarrow{30} B: \text{Hin} [0, 30] \\
+\text{Rückfahrt (Start 31): } & B \xrightarrow{30} A: (31+30)\bmod60=1,\; \text{Rück} [31, 1]
+\end{align*}
+
+Überlapp: $t=0$ liegt in $[0,30]$ und in $[31,1]$ (über Null: $t \leq 1$) $\Rightarrow$ Kollision unvermeidlich, unabhängig von der gewählten Startzeit der Rückfahrt.
+
+\textbf{Beobachtetes Verhalten im Beidseitigen Warten}:
+\begin{itemize}
+    \item Die Schleife \texttt{for (int i = 0; i < 60; i++)} findet für keine der 60 Startzeiten eine kollisionsfreie Lösung.
+    \item \texttt{besteStartzeitRueck} bleibt auf dem Initialwert \textbf{-1}.
+    \item \texttt{rueckfahrtMitKollision(plan, -1)} wird aufgerufen.
+    \item Java berechnet $(-1) \bmod 60 = -1$ (Vorzeichen bleibt erhalten).
+    \item In der Ausgabe erscheint \texttt{Ab 30  -1} -- ein negativer Zeitwert.
+\end{itemize}
+
+\begin{lstlisting}[caption={Fehlerhafte Ausgabe F2 -- negativer Zeitwert}]
+Beidseitiges Warten:
+An     30
+Ab 00  31
+    Ax  B
+Ab 30  -1       <- Bug: negativer Zeitwert!
+An 29
+\end{lstlisting}
+
+\begin{bugbox}[title={Bug: Negativer Zeitwert bei unlösbarer Kollision}]
+Wenn \texttt{BeidseitigesWartenStrategie} für keine der 60 Startzeiten eine kollisionsfreie Rückfahrt findet, bleibt \texttt{besteStartzeitRueck = -1}. Dies führt zu einem negativen Zeitwert in der Ausgabe.
+
+\textbf{Reproduktion}: Strecke A B, Abstand = 30, Start = 0.
+
+\textbf{Schweregrad}: Ausgabe-Fehler (kein Absturz).
+
+\textbf{Mögliche Lösung}: Den Fall \texttt{besteStartzeitRueck == -1} explizit behandeln, z.\,B. auf Startzeit 0 zurückfallen oder eine Fehlermeldung ausgeben.
+\end{bugbox}
+
+\textbf{Status}: \fail{} -- Ausgabe enthält negativen Zeitwert.
+
+% ─────────────────────────────────────────
+\subsection{Stresstests und Sonderfälle}
+
+\subsubsection{Test S1 -- Kaskadenkollisionen (5 Bahnhöfe, gleichmäßige Abstände)}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Datei} & \texttt{08\_kaskade\_vieleKollisionen.txt} \\
+\textbf{Strecke} & A B C D E, Abstände: 10 10 10 10, Start: 0 \\
+\textbf{Ziel} & Mehrere Kollisionen gleichzeitig, Kaskade von Wartezeiten \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Analyse}: Bei gleichmäßigen Abständen von 10 Minuten auf 5 Bahnhöfen entsteht eine ausgeprägte Kollisionslage. Einseitiges Warten muss an Bahnhof C 16 Minuten warten:
+
+\begin{center}
+\begin{tabular}{r|ccccc}
+ & A & B & C & D & E \\
+\hline
+Ab Hin & 00 & 11 & 22 & 33 & 44 \\
+\hline
+Ab Rück (einseitig) & -- & 33 & 22 & 55 & 44 \\
+Wa Rück & -- & -- & 16 & -- & -- \\
+\end{tabular}
+\end{center}
+
+\textbf{Beidseitiges Warten}: Durch Wahl der Startzeit E:00 entsteht keine Kollision (symmetrische Strecke), Strafe = 0.
+
+\textbf{Status}: \pass{} -- Kaskade korrekt aufgelöst.
+
+\subsubsection{Test S2 -- Symmetrische Strecke}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Datei} & \texttt{10\_symmetrisch\_beidseitig.txt} \\
+\textbf{Strecke} & A B C D E, Abstände: 20 5 5 20, Start: 0 \\
+\textbf{Ziel} & Beidseitiges Warten bei symmetrischer Aufteilung \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Eine symmetrische Strecke (gleiche Abstände von innen und außen) sollte beim Beidseitigen Warten zu einer gleichmäßigen Aufteilung führen.
+
+\textbf{Status}: \pass{} -- Wartezeit korrekt aufgeteilt, Strafe minimiert.
+
+\subsubsection{Test S3 -- Ungerade Anzahl Bahnhöfe (12 Stationen)}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Datei} & \texttt{00\_ungerade.txt} \\
+\textbf{Strecke} & A--L (12 Bahnhöfe), verschiedene Abstände, Start: 23 \\
+\textbf{Ziel} & Korrekte Funktion bei gerader/ungerader Anzahl von Bahnhöfen \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Status}: \pass{} -- 3 Kollisionen erkannt (B, E, I), alle korrekt behandelt.
+
+\subsubsection{Test S4 -- Stress-Test (52 Bahnhöfe)}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Datei} & \texttt{13\_stress\_test.txt} \\
+\textbf{Strecke} & A--AZ (52 Bahnhöfe), Start: 37 \\
+\textbf{Ziel} & Performance und Korrektheit bei großer Strecke \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Mit 52 Bahnhöfen muss \texttt{BeidseitigesWartenStrategie} für jede der 60 Startzeiten \texttt{rueckfahrtMitKollision()} über 52 Knoten ausführen: $60 \times 52 = 3120$ Knotenoperationen. Dies bleibt im Millisekunden-Bereich.
+
+\textbf{Status}: \pass{} -- Keine Abstürze, Ausgabe in weniger als einer Sekunde.
+
+% ─────────────────────────────────────────
+\subsection{Gesamtübersicht Testergebnisse}
+
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+\textbf{Test-ID} & \textbf{Datei} & \textbf{Kategorie} & \textbf{Ergebnis} \\
+\midrule
+N1 & \texttt{Beispiel1.txt} & Normal & \pass \\
+N2 & \texttt{Beispiel2.txt} & Normal & \pass \\
+N3 & \texttt{Beispiel3.txt} & Normal & \pass \\
+G1 & \texttt{04\_grenz\_zweiStationen} & Grenz & \pass \\
+G2 & \texttt{05\_grenz\_startzeit59} & Grenz & \pass \\
+G3 & \texttt{09\_grenz\_startzeit0} & Grenz & \pass \\
+G4 & \texttt{11\_rollover\_mitternacht} & Grenz & \pass \\
+G5 & \texttt{12\_minimalAbstand1} & Grenz & \pass \\
+G6 & \texttt{07\_grenz\_erzwungeneKollision} & Grenz & \pass \\
+F1 & \texttt{06\_grenz\_startzeit\_ueber60} & Fehler & \warn \\
+F2 & \texttt{07b\_abstand30\_kollision} & Fehler & \fail \\
+S1 & \texttt{08\_kaskade\_vieleKollisionen} & Stress & \pass \\
+S2 & \texttt{10\_symmetrisch\_beidseitig} & Stress & \pass \\
+S3 & \texttt{00\_ungerade} & Stress & \pass \\
+S4 & \texttt{13\_stress\_test} & Stress & \pass \\
+\midrule
+\multicolumn{3}{l}{\textbf{Gesamt}} & 13\,\pass\ / 1\,\warn\ / 1\,\fail \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ─────────────────────────────────────────
+\section{Bekannte Einschränkungen und offene Punkte}
+
+\subsection{Zusammenfassung der Bugs}
+
+\begin{center}
+\begin{tabular}{lp{6cm}ll}
+\toprule
+\textbf{ID} & \textbf{Problem} & \textbf{Schwere} & \textbf{Test} \\
+\midrule
+BUG-01 & Negativer Zeitwert bei Abstand = 30 (\texttt{besteStartzeitRueck = -1}) & Mittel & F2 \\
+BUG-02 & Startzeit $> 59$ wird nicht normalisiert, erscheint unkorrekt in Ausgabe & Niedrig & F1 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Lösungsvorschläge}
+
+\textbf{BUG-01 beheben}:
+
+In \texttt{BeidseitigesWartenStrategie.berechneFahrplan()} nach der Suchschleife prüfen ob eine gültige Lösung gefunden wurde:
+
+\begin{lstlisting}[caption={Korrektur BUG-01}]
+if (besteStartzeitRueck == -1) {
+    // Keine kollisionsfreie Loesung: Fallback auf Start 0
+    besteStartzeitRueck = 0;
+}
+rueckfahrtMitKollision(plan, besteStartzeitRueck);
+\end{lstlisting}
+
+\textbf{BUG-02 beheben}:
+
+In \texttt{EingabeLeser.leseDatei()} die Startzeit normalisieren:
+
+\begin{lstlisting}[caption={Korrektur BUG-02}]
+startZeit = Integer.parseInt(zeilen.get(i + 1).trim()) % 60;
+\end{lstlisting}
+
+\subsection{Weitere Einschränkungen}
+
+\begin{itemize}
+    \item \textbf{Bahnhofnamen}: Das Ausgabeformat ist auf 2-stellige Bahnhofnamen ausgelegt. Längere Namen verschieben die Spaltenausrichtung.
+    \item \textbf{Keine Mehrstreckigkeit}: Das Programm unterstützt nur eine lineare Strecke ohne Verzweigungen.
+    \item \textbf{Keine persistente Konfiguration}: Strategien müssen durch Änderung des Quellcodes in \texttt{Main.java} hinzugefügt oder entfernt werden.
+    \item \textbf{Keine automatisierten Unit-Tests}: Das Projekt enthält keine JUnit-Tests. Alle Tests sind manuelle Dateitests.
+\end{itemize}
+
+% ─────────────────────────────────────────
+\section{Entwicklungshinweise}
+
+\subsection{Coding-Konventionen}
+
+\begin{itemize}
+    \item Alle Klassenfelder sind \texttt{private}, Zugriff nur über Getter/Setter.
+    \item Zeitarithmetik erfolgt \textbf{immer} als \texttt{(x + y) \% 60} -- nie als einfache Addition ohne Modulo.
+    \item Gemeinsame Algorithmen sind als \texttt{static}-Methoden in \texttt{FahrplanStrategie} zentralisiert.
+    \item \texttt{Integer} (Wrapper) statt \texttt{int} für Zeitfelder in \texttt{BahnhofNode}, damit \texttt{null} als ``nicht gesetzt'' erkannt werden kann.
+\end{itemize}
+
+\subsection{Wichtige Invarianten}
+
+\begin{itemize}
+    \item \texttt{EinfacheFahrtStrategie} muss \textbf{immer zuerst} ausgeführt werden, da Strategien 2 und 3 auf deren Hinfahrtdaten aufbauen.
+    \item \texttt{isKollision()} gibt für den letzten Knoten (\texttt{next == null}) immer \texttt{false} zurück.
+    \item \texttt{distanceToNext} des letzten Knotens ist undefiniert (wird nie gelesen).
+    \item Alle Zeiten sind Modulo-60-Werte im Bereich [0, 59], außer bei BUG-02 (Startzeit) und BUG-01 (negative Rückgabe).
+\end{itemize}
+
+\subsection{Build und Deployment}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Befehl} & \textbf{Aktion} \\
+\midrule
+\texttt{mvn compile} & Quellcode kompilieren \\
+\texttt{mvn package} & JAR-Datei erstellen \\
+\texttt{mvn clean} & Build-Artefakte löschen \\
+\texttt{mvn exec:java ...} & Programm direkt über Maven starten \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\end{document}

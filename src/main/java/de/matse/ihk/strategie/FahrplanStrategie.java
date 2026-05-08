@@ -3,14 +3,33 @@ package de.matse.ihk.strategie;
 import de.matse.ihk.model.BahnhofNode;
 import de.matse.ihk.model.BahnhofPlan;
 
+/**
+ * Common base for all scheduling strategies (Strategy Pattern).
+ * Concrete subclasses implement {@link #berechneFahrplan} and the penalty methods;
+ * the static helper methods here contain the shared traversal algorithms.
+ */
 public abstract class FahrplanStrategie {
-    public abstract String getStrategieName(); 
-    public abstract void berechneFahrplan(BahnhofPlan plan, int startZeit); 
-    public abstract int getSummeStrafen(); 
-    public abstract int getSummeWarteZeit(); 
-    protected BahnhofPlan aktuellerPlan; // Hier speichern wir den Plan zwischen
+
+    /** @return display name used in output headers */
+    public abstract String getStrategieName();
+
+    /**
+     * Computes the full timetable and writes results into {@code plan}.
+     * Called once per strategy run; {@code plan} has been reset beforehand.
+     */
+    public abstract void berechneFahrplan(BahnhofPlan plan, int startZeit);
+
+    /** @return quadratic penalty for this strategy's computed waiting times */
+    public abstract int getSummeStrafen();
+
+    /** @return total waiting minutes summed across all stations and both directions */
+    public abstract int getSummeWarteZeit();
+
+    /** Retained reference to the plan set during {@link #berechneFahrplan}, used by penalty methods. */
+    protected BahnhofPlan aktuellerPlan;
 
 
+/** Traverses head → tail, setting all forward-journey times without any waiting time. */
 public static void hinfahrtOhneKollision(BahnhofPlan plan, int startZeit) {
             BahnhofNode current = plan.getHead(); 
             warteZeitHinReset(plan);
@@ -22,6 +41,7 @@ public static void hinfahrtOhneKollision(BahnhofPlan plan, int startZeit) {
             }
 }
 
+/** Traverses tail → head, setting all return-journey times without any waiting time. */
 public static void rueckfahrtOhneKollision(BahnhofPlan plan, int startZeit) {
             BahnhofNode current = plan.getTail(); 
             warteZeitRueckReset(plan);
@@ -33,6 +53,7 @@ public static void rueckfahrtOhneKollision(BahnhofPlan plan, int startZeit) {
             }
 }
 
+/** Forward traversal that adds each node's {@code wartezeitHin} to the departure time. */
 public static void hinfahrtMitKollision(BahnhofPlan plan, int startZeit) {
             BahnhofNode current = plan.getHead(); 
             current.setAbfahrthin(startZeit);
@@ -43,6 +64,12 @@ public static void hinfahrtMitKollision(BahnhofPlan plan, int startZeit) {
             }
 }
 
+/**
+ * Two-phase return-journey calculation.
+ * Phase 1: baseline run via {@link #rueckfahrtOhneKollision}.
+ * Phase 2: backwards pass — recomputes each node's arrival from its successor and
+ * inserts waiting time wherever the predecessor segment has a collision.
+ */
 public static void rueckfahrtMitKollision(BahnhofPlan plan, int startZeit) {
             BahnhofNode current = plan.getTail(); 
             rueckfahrtOhneKollision(plan, startZeit);
@@ -64,7 +91,12 @@ public static void rueckfahrtMitKollision(BahnhofPlan plan, int startZeit) {
             }
             current.setAnkunftrueck((current.getNext().getAbfahrtrueck()+ current.getDistanceToNext())%60);
     }
-    public static void beidseitigesWarten(BahnhofPlan plan, int startZeitHin){
+    /**
+     * Splits each node's {@code wartezeitRueck} evenly between both directions
+     * (floor/ceil for odd values), then recalculates both journeys.
+     * Equal split always yields a lower combined quadratic penalty than one-sided waiting.
+     */
+    public static void beidseitigesWarten(BahnhofPlan plan, int startZeitHin) {
           BahnhofNode head = plan.getHead(); 
           int zeitverschiebung = 0;
           int gesamtZeit;

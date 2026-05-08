@@ -1,3 +1,8 @@
+Eingabe:
+  Strecke   : A → B → C → D → E → F → G → H → I → J → K → L → M → N → O → P → Q → R → S → T → U → V → W → X → Y → Z → AA → AB → AC → AD → AE → AF → AG → AH → AI → AJ → AK → AL → AM → AN → AO → AP → AQ → AR → AS → AT → AU → AV → AW → AX → AY → AZ
+  Abstände  : 4 min, 11 min, 7 min, 18 min, 3 min, 22 min, 9 min, 14 min, 6 min, 25 min, 5 min, 12 min, 8 min, 19 min, 10 min, 16 min, 2 min, 21 min, 13 min, 7 min, 24 min, 4 min, 15 min, 9 min, 6 min, 20 min, 11 min, 5 min, 17 min, 8 min, 23 min, 3 min, 14 min, 10 min, 18 min, 6 min, 12 min, 9 min, 21 min, 4 min, 16 min, 7 min, 25 min, 5 min, 13 min, 8 min, 19 min, 10 min, 6 min, 22 min, 11 min
+  Start Hin : 37
+
 Einfache Fahrt:
 An     41  53  01  20  24  47  57  12  19  45  51  04  13  33  44  01  04  26  40  48  13  18  34  44  51  12  24  30  48  57  21  25  40  51  10  17  30  40  02  07  24  32  58  04  18  27  47  58  05  28  40
 Wa                                                                                                                                                                                                               

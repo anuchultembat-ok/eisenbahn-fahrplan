@@ -1,3 +1,8 @@
+Eingabe:
+  Strecke   : A → B → C → D → E → F → G → H → I → J → K → L
+  Abstände  : 4 min, 9 min, 6 min, 13 min, 8 min, 11 min, 5 min, 7 min, 10 min, 6 min, 12 min
+  Start Hin : 23
+
 Einfache Fahrt:
 An     27  37  44  58  07  19  25  33  44  51  04
 Wa                                               

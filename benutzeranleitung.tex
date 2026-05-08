@@ -1,0 +1,551 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[ngerman]{babel}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{tcolorbox}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{mdframed}
+\usepackage{graphicx}
+
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric}
+
+\geometry{margin=2.5cm}
+
+\hypersetup{colorlinks=true, linkcolor=blue!60!black}
+
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{codeframe}{RGB}{200,200,200}
+\definecolor{terminalBg}{RGB}{30,30,30}
+\definecolor{terminalFg}{RGB}{200,255,200}
+
+\lstset{
+    backgroundcolor=\color{codebg},
+    frame=single,
+    rulecolor=\color{codeframe},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    showstringspaces=false,
+    numbers=none,
+}
+
+\lstdefinestyle{terminal}{
+    backgroundcolor=\color{terminalBg},
+    basicstyle=\ttfamily\small\color{terminalFg},
+    frame=single,
+    rulecolor=\color{gray},
+    numbers=none,
+    breaklines=true,
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Eisenbahn-Fahrplan -- Benutzeranleitung}
+\lhead{IHK Abschlussprojekt}
+\rfoot{Seite \thepage}
+
+\tcbuselibrary{skins, breakable}
+
+\newtcolorbox{tipp}[1][]{
+    colback=green!5, colframe=green!50!black,
+    fonttitle=\bfseries, title=Tipp, #1
+}
+\newtcolorbox{warnung}[1][]{
+    colback=red!5, colframe=red!60!black,
+    fonttitle=\bfseries, title=Achtung, #1
+}
+\newtcolorbox{beispiel}[1][]{
+    colback=blue!5, colframe=blue!40!black,
+    fonttitle=\bfseries, title=Beispiel, #1
+}
+\newtcolorbox{hinweis}[1][]{
+    colback=orange!5, colframe=orange!50!black,
+    fonttitle=\bfseries, title=Hinweis, #1
+}
+
+% ─────────────────────────────────────────
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    {\Huge\bfseries Eisenbahn-Fahrplan Simulation\par}
+    \vspace{0.5cm}
+    {\Large Benutzeranleitung\par}
+    \vspace{2cm}
+    \rule{\linewidth}{0.4pt}\\[0.5cm]
+    {\large IHK Abschlussprojekt -- MATSE\par}
+    \rule{\linewidth}{0.4pt}
+    \vspace{2cm}
+    {\large\itshape Anleitung zur Installation, Konfiguration\\und Verwendung des Programms\par}
+    \vfill
+    {\large Version 1.0 \quad 2026\par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ─────────────────────────────────────────
+\section{Einleitung}
+
+Dieses Programm berechnet Fahrpläne für eine eingleisige Eisenbahnstrecke. Es simuliert, wie ein Zug eine Strecke von mehreren Bahnhöfen in Hin- und Rückrichtung befährt -- auf einem einzigen Gleis, auf dem sich die Züge nicht begegnen dürfen.
+
+Das Programm berechnet den Fahrplan nach drei verschiedenen Strategien und zeigt jeweils an, ob und wo Kollisionen auftreten und wie lange Wartezeiten anfallen.
+
+\textbf{Was das Programm macht:}
+\begin{itemize}
+    \item Liest eine Textdatei mit Streckendaten ein
+    \item Berechnet drei Fahrplanvarianten (Einfache Fahrt, Einseitiges Warten, Beidseitiges Warten)
+    \item Gibt die Ergebnisse übersichtlich in der Konsole aus
+    \item Speichert die Ergebnisse automatisch als Textdatei
+\end{itemize}
+
+% ─────────────────────────────────────────
+\section{Systemvoraussetzungen}
+
+Vor dem ersten Start müssen folgende Programme installiert sein:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Software} & \textbf{Mindestversion} & \textbf{Verwendungszweck} \\
+\midrule
+Java JDK & 17 & Laufzeitumgebung \\
+Apache Maven & 3.6 & Build-Werkzeug \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Überprüfung der Installation:}
+
+\begin{lstlisting}[style=terminal]
+$ java -version
+openjdk version "17.0.x" ...
+
+$ mvn -version
+Apache Maven 3.x.x ...
+\end{lstlisting}
+
+\begin{warnung}
+Das Programm läuft \textbf{nicht} auf Java 8 oder Java 11, da es Java Records (\texttt{SimulationsDaten}) verwendet, die erst ab Java 16 verfügbar sind.
+\end{warnung}
+
+% ─────────────────────────────────────────
+\section{Projektstruktur}
+
+Nach dem Entpacken oder Klonen des Projekts sieht die Verzeichnisstruktur folgendermaßen aus:
+
+\begin{lstlisting}
+eisenbahn-fahrplan/
+|-- pom.xml                          Build-Konfiguration (Maven)
+|-- testfaelle/                      Eingabedateien fuer Tests
+|   |-- Beispiel1.txt
+|   |-- Beispiel2.txt
+|   `-- ...
+|-- ausgabe/                         Ausgabedateien (automatisch erstellt)
+|   `-- Beispiel1_ergebnis.txt
+`-- src/
+    `-- main/
+        `-- java/
+            `-- de/matse/ihk/
+                |-- Main.java        Einstiegspunkt
+                |-- io/
+                |   |-- EingabeLeser.java
+                |   `-- AusgabeManager.java
+                |-- model/
+                |   |-- BahnhofNode.java
+                |   |-- BahnhofPlan.java
+                |   `-- SimulationsDaten.java
+                `-- strategie/
+                    |-- FahrplanStrategie.java
+                    |-- EinfacheFahrtStrategie.java
+                    |-- EinseitigesWartenStrategie.java
+                    `-- BeidseitigesWartenStrategie.java
+\end{lstlisting}
+
+% ─────────────────────────────────────────
+\section{Installation und Kompilierung}
+
+\subsection{Schritt 1: Projekt kompilieren}
+
+Öffne ein Terminal im Projektverzeichnis (\texttt{eisenbahn-fahrplan/}) und führe aus:
+
+\begin{lstlisting}[style=terminal]
+$ mvn compile
+[INFO] BUILD SUCCESS
+\end{lstlisting}
+
+Maven lädt automatisch alle benötigten Abhängigkeiten herunter und kompiliert den Quellcode. Die kompilierten Dateien landen im Verzeichnis \texttt{target/classes/}.
+
+\subsection{Schritt 2: (Optional) JAR-Datei erstellen}
+
+\begin{lstlisting}[style=terminal]
+$ mvn package
+[INFO] BUILD SUCCESS
+\end{lstlisting}
+
+Damit entsteht eine ausführbare JAR-Datei unter \texttt{target/eisenbahn-fahrplan-1.0-SNAPSHOT.jar}.
+
+% ─────────────────────────────────────────
+\section{Eingabedatei erstellen}
+
+\subsection{Format der Eingabedatei}
+
+Das Programm liest Textdateien im folgenden Format ein. Die Schlüsselwörter müssen exakt so geschrieben sein (inklusive Doppelpunkt):
+
+\begin{lstlisting}[caption={Aufbau einer Eingabedatei}]
+Strecke:
+<Bahnhof1> <Bahnhof2> <Bahnhof3> ...
+Abstaende:
+<Abstand1> <Abstand2> ...
+Start Hinfahrt:
+<Startzeit>
+\end{lstlisting}
+
+\begin{center}
+\begin{tabular}{lp{9cm}}
+\toprule
+\textbf{Feld} & \textbf{Beschreibung} \\
+\midrule
+\texttt{Strecke:} & Bahnhofsnamen, durch Leerzeichen getrennt. Jeder Name darf maximal \textbf{2 Zeichen} lang sein (für korrekte Ausgabe). \\
+\texttt{Abstaende:} & Fahrtzeiten in Minuten zwischen je zwei aufeinanderfolgenden Bahnhöfen. Bei $n$ Bahnhöfen sind $n-1$ Abstände nötig. \\
+\texttt{Start Hinfahrt:} & Abfahrtszeit des Hinzuges am ersten Bahnhof (Minuten, Wert 0--59). \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Beispiel: Eingabedatei erstellen}
+
+\begin{beispiel}[title={Strecke A--B--C--D mit vier Bahnhöfen}]
+\begin{lstlisting}
+Strecke:
+A B C D
+Abstaende:
+10 8 12
+Start Hinfahrt:
+5
+\end{lstlisting}
+
+Bedeutung:
+\begin{itemize}
+    \item 4 Bahnhöfe: A, B, C, D
+    \item A nach B: 10 Minuten, B nach C: 8 Minuten, C nach D: 12 Minuten
+    \item Der Hinzug fährt um Minute 5 in A ab
+\end{itemize}
+\end{beispiel}
+
+\subsection{Regeln und Einschränkungen}
+
+\begin{itemize}
+    \item Mindestens \textbf{2 Bahnhöfe} sind erforderlich.
+    \item Die Anzahl der Abstände muss genau $n-1$ betragen (wobei $n$ die Anzahl der Bahnhöfe ist).
+    \item Leere Zeilen zwischen den Blöcken sind erlaubt und werden ignoriert.
+    \item Die Startzeit sollte zwischen 0 und 59 liegen. Werte über 59 werden \textbf{nicht} automatisch normalisiert (siehe Abschnitt~\ref{sec:fehler}).
+    \item Bahnhofsnamen sollten maximal 2 Zeichen lang sein, damit die tabellarische Ausgabe korrekt formatiert wird.
+\end{itemize}
+
+% ─────────────────────────────────────────
+\section{Programm starten}
+
+\subsection{Mit Maven (empfohlen)}
+
+\begin{lstlisting}[style=terminal]
+$ mvn exec:java -Dexec.mainClass="de.matse.ihk.Main" -Dexec.args="testfaelle"
+\end{lstlisting}
+
+Das Argument \texttt{testfaelle} ist der Pfad zum Verzeichnis mit den Eingabedateien. Das Programm verarbeitet \textbf{alle} \texttt{.txt}-Dateien in diesem Verzeichnis.
+
+\begin{tipp}
+Um nur eine einzelne Datei zu testen, lege sie in einem separaten Verzeichnis ab, z.\,B.:
+\begin{lstlisting}[style=terminal]
+$ mkdir meintest && cp meineFahrt.txt meintest/
+$ mvn exec:java -Dexec.mainClass="de.matse.ihk.Main" -Dexec.args="meintest"
+\end{lstlisting}
+\end{tipp}
+
+\subsection{Mit JAR-Datei}
+
+Nach \texttt{mvn package} kann die JAR-Datei direkt gestartet werden. Dazu muss in der \texttt{pom.xml} ein \texttt{mainClass}-Eintrag konfiguriert sein:
+
+\begin{lstlisting}[style=terminal]
+$ java -cp target/eisenbahn-fahrplan-1.0-SNAPSHOT.jar \
+    de.matse.ihk.Main testfaelle
+\end{lstlisting}
+
+\subsection{Standardverzeichnis}
+
+Wird kein Argument übergeben, sucht das Programm im Verzeichnis \texttt{testfaelle/} relativ zum aktuellen Arbeitsverzeichnis:
+
+\begin{lstlisting}[style=terminal]
+$ mvn exec:java -Dexec.mainClass="de.matse.ihk.Main"
+\end{lstlisting}
+
+% ─────────────────────────────────────────
+\section{Ausgabe verstehen}
+
+\subsection{Konsolenausgabe}
+
+Für jede verarbeitete Eingabedatei erscheint die Ausgabe aller drei Strategien auf der Konsole. Das Format ist für alle drei Strategien identisch.
+
+\subsection{Aufbau der Fahrplantabelle}
+
+Die Tabelle stellt die Bahnhöfe als \textbf{Spalten} und die Zeitinformationen als \textbf{Zeilen} dar:
+
+\begin{lstlisting}[caption={Beispielausgabe -- Einseitiges Warten (Beispiel2)}]
+Einseitiges Warten:
+An     22  31  38  46  50  53        <- Ankunft Hinfahrt
+Wa                                   <- Wartezeit Hinfahrt
+Ab 17  23  32  39  47  51            <- Abfahrt Hinfahrt
+    A   B   C   D   E   F   G        <- Bahnhofnamen
+Ab     41  32  09  01  57  54        <- Abfahrt Rueckfahrt
+Wa         16                        <- Wartezeit Rueckfahrt
+An 46  40  15  08  00  56            <- Ankunft Rueckfahrt
+Gesamtdauer Hinfahrt, Rueckfahrt       : 36, 52
+Summe Wartezeiten Hinfahrt, Rueckfahrt : 0, 16
+Summe Strafen                          : 256
+\end{lstlisting}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    box/.style={draw, fill=blue!10, minimum width=2cm, minimum height=0.6cm,
+                font=\small\ttfamily, rounded corners=2pt},
+    lbl/.style={font=\small, align=left},
+    arr/.style={-Stealth, thick, gray}
+]
+% Hinfahrt (oben)
+\node[lbl] at (-1.5, 3.0) {\textbf{An}};
+\node[lbl] at (-1.5, 2.3) {\textbf{Wa}};
+\node[lbl] at (-1.5, 1.6) {\textbf{Ab}};
+
+% Bahnhöfe
+\node[box] (A) at (0,0) {A};
+\node[box] (B) at (2,0) {B};
+\node[box] (C) at (4,0) {C};
+\node[box] (D) at (6,0) {\ldots};
+
+% Rückfahrt (unten)
+\node[lbl] at (-1.5,-1.6) {\textbf{Ab}};
+\node[lbl] at (-1.5,-2.3) {\textbf{Wa}};
+\node[lbl] at (-1.5,-3.0) {\textbf{An}};
+
+% Hinfahrt-Zeiten
+\node[font=\small\ttfamily] at (0, 3.0) {--};
+\node[font=\small\ttfamily] at (2, 3.0) {22};
+\node[font=\small\ttfamily] at (4, 3.0) {31};
+\node[font=\small\ttfamily] at (0, 1.6) {17};
+\node[font=\small\ttfamily] at (2, 1.6) {23};
+\node[font=\small\ttfamily] at (4, 1.6) {32};
+
+% Rückfahrt-Zeiten
+\node[font=\small\ttfamily] at (2,-1.6) {41};
+\node[font=\small\ttfamily] at (4,-1.6) {32};
+\node[font=\small\ttfamily] at (4,-2.3) {16};
+\node[font=\small\ttfamily] at (2,-3.0) {40};
+\node[font=\small\ttfamily] at (4,-3.0) {15};
+
+% Richtungspfeile
+\draw[arr, red!70!black, very thick] (-0.8,0) -- (6.8,0)
+    node[right, font=\small] {Hinfahrt $\to$};
+\draw[arr, green!50!black, very thick] (6.8,-0.5) -- (-0.8,-0.5)
+    node[left, font=\small] {$\leftarrow$ Rückfahrt};
+
+% Kollisions-x
+\node[font=\bfseries\color{red}] at (3, 0.3) {x};
+\end{tikzpicture}
+\caption{Struktur der Fahrplantabelle: oben Hinfahrt (links nach rechts), unten Rückfahrt (rechts nach links)}
+\end{figure}
+
+\subsection{Bedeutung der einzelnen Zeilen}
+
+\begin{center}
+\begin{tabular}{lp{9.5cm}}
+\toprule
+\textbf{Zeile} & \textbf{Bedeutung} \\
+\midrule
+\textbf{An} (oben) & Ankunftszeit des Hinzuges an diesem Bahnhof. Der erste Bahnhof hat keine Ankunftszeit (leer). \\
+\textbf{Wa} (oben) & Wartezeit des Hinzuges an diesem Bahnhof (nur bei Beidseitigem Warten gefüllt). \\
+\textbf{Ab} (oben) & Abfahrtszeit des Hinzuges. Beim letzten Bahnhof leer (Ziel). \\
+\textbf{Bahnhofzeile} & Namen aller Bahnhöfe. Ein \textbf{x} zwischen zwei Namen zeigt eine Kollision auf diesem Abschnitt an. \\
+\textbf{Ab} (unten) & Abfahrtszeit des Rückzuges. Beim ersten Bahnhof (A) leer -- er ist Ziel der Rückfahrt. \\
+\textbf{Wa} (unten) & Wartezeit des Rückzuges (bei Einseitigem oder Beidseitigem Warten). \\
+\textbf{An} (unten) & Ankunftszeit des Rückzuges. Beim letzten Bahnhof (Z) leer -- er ist Start der Rückfahrt. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Statistikzeilen}
+
+\begin{center}
+\begin{tabular}{lp{8.5cm}}
+\toprule
+\textbf{Ausgabe} & \textbf{Bedeutung} \\
+\midrule
+\texttt{Gesamtdauer Hinfahrt, Rückfahrt} & Gesamte Fahrzeit inklusive aller Halte- und Wartezeiten. \\
+\texttt{Summe Wartezeiten Hinfahrt, Rückfahrt} & Summe aller Wartezeiten des Hin- bzw. Rückzuges. \\
+\texttt{Summe Strafen} & Strafe = (Summe Wartezeiten Hin)$^2$ + (Summe Wartezeiten Rück)$^2$. Je niedriger, desto besser. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Kollisionsmarkierung}
+
+Ein \textbf{x} in der Bahnhofzeile zeigt, dass auf dem Abschnitt \emph{zwischen diesem Bahnhof und dem nächsten} eine Kollision zwischen Hin- und Rückzug stattfindet. Beispiel:
+
+\begin{lstlisting}
+    A   Bx  C   D
+\end{lstlisting}
+
+Das \texttt{x} hinter \texttt{B} bedeutet: Auf dem Abschnitt \textbf{B$\to$C} befinden sich Hin- und Rückzug gleichzeitig. Die Einfache Fahrt zeigt diese Kollisionen an, löst sie aber nicht auf.
+
+\subsection{Ausgabedateien}
+
+Parallel zur Konsolenausgabe speichert das Programm die Ergebnisse automatisch:
+
+\begin{center}
+\texttt{ausgabe/<eingabedateiname>\_ergebnis.txt}
+\end{center}
+
+Das Verzeichnis \texttt{ausgabe/} wird automatisch angelegt, falls es nicht existiert.
+
+% ─────────────────────────────────────────
+\section{Vollständiges Durchführungsbeispiel}
+
+\subsection{Ziel}
+
+Wir berechnen den Fahrplan für die Strecke A--B--C (3 Bahnhöfe, Abstände 5 und 7 Minuten, Startzeit Minute 17).
+
+\subsection{Schritt 1: Eingabedatei anlegen}
+
+Erstelle die Datei \texttt{testfaelle/meine\_strecke.txt}:
+
+\begin{lstlisting}
+Strecke:
+A B C
+Abstaende:
+5 7
+Start Hinfahrt:
+17
+\end{lstlisting}
+
+\subsection{Schritt 2: Programm starten}
+
+\begin{lstlisting}[style=terminal]
+$ mvn exec:java -Dexec.mainClass="de.matse.ihk.Main" -Dexec.args="testfaelle"
+====================================
+MATSE Fahrplan-Simulation
+====================================
+
+Verarbeite Datei: meine_strecke.txt
+Ergebnis erfolgreich in .../ausgabe/meine_strecke_ergebnis.txt gespeichert.
+\end{lstlisting}
+
+\subsection{Schritt 3: Ergebnis lesen}
+
+\begin{lstlisting}
+Einfache Fahrt:
+An     22  30
+Wa
+Ab 17  23  31
+    A   B   C
+Ab 45  39  31
+Wa
+An 44  38
+Gesamtdauer Hinfahrt, Rueckfahrt       : 13, 13
+Summe Wartezeiten Hinfahrt, Rueckfahrt : 0, 0
+Summe Strafen                          : 0
+\end{lstlisting}
+
+\textbf{Auswertung}:
+\begin{enumerate}
+    \item Hinzug: A ab 17 $\to$ B an 22, ab 23 $\to$ C an 30
+    \item Rückzug startet sofort nach Ankunft: C ab 31 $\to$ B an 38, ab 39 $\to$ A an 44
+    \item Kein \texttt{x} in der Bahnhofzeile $\Rightarrow$ keine Kollision
+    \item Gesamtdauer: 13 Minuten (= 5 + 7 + 1 Haltezeit bei B)
+    \item Alle drei Strategien liefern dasselbe Ergebnis, da keine Kollision vorliegt
+\end{enumerate}
+
+% ─────────────────────────────────────────
+\section{Die drei Strategien im Vergleich}
+
+\begin{center}
+\begin{tabular}{lp{4cm}p{4.5cm}l}
+\toprule
+\textbf{Strategie} & \textbf{Was passiert bei Kollision?} & \textbf{Wann sinnvoll?} & \textbf{Strafe} \\
+\midrule
+Einfache Fahrt & Kollision wird angezeigt, aber \textbf{nicht} aufgelöst & Zum Erkennen, ob eine Kollision vorliegt & 0 \\
+Einseitiges Warten & Nur der \textbf{Rückzug} wartet & Einfache Lösung, aber unfair für Rückzug & $(W_R)^2$ \\
+Beidseitiges Warten & Wartezeit wird \textbf{hälftig aufgeteilt} & Minimale Gesamtstrafe & $(W_H)^2 + (W_R)^2$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{hinweis}
+Das Beidseitige Warten versucht aktiv, eine günstige Abfahrtszeit für den Rückzug zu finden. Oft kann es die Kollision komplett vermeiden (Strafe = 0), indem es die Rückfahrt einfach früher oder später beginnt.
+\end{hinweis}
+
+% ─────────────────────────────────────────
+\section{Fehlermeldungen und Problemlösungen}
+\label{sec:fehler}
+
+\subsection{Häufige Fehlermeldungen}
+
+\begin{center}
+\begin{tabular}{p{5.5cm}p{7.5cm}}
+\toprule
+\textbf{Fehlermeldung} & \textbf{Ursache und Lösung} \\
+\midrule
+\texttt{Der angegebene Eingabeordner existiert nicht} & Das Verzeichnis wurde nicht gefunden. Überprüfe den angegebenen Pfad. \\
+\texttt{Keine .txt Dateien im Eingabeordner gefunden} & Das Verzeichnis enthält keine \texttt{.txt}-Dateien. \\
+\texttt{Fehler beim Lesen der Datei} & Die Datei ist beschädigt oder hat ein falsches Encoding. Stelle sicher, dass die Datei UTF-8-kodiert ist. \\
+\texttt{NumberFormatException} & Eine Zahl in der Eingabedatei konnte nicht gelesen werden (z.\,B. Buchstabe statt Zahl bei Abständen). \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Bekannte Besonderheiten}
+
+\subsubsection{Startzeit größer als 59}
+
+Wird eine Startzeit größer als 59 angegeben (z.\,B. 73), normalisiert das Programm diese \textbf{nicht} automatisch. Der Wert 73 erscheint unverändert in der Ausgabe:
+
+\begin{lstlisting}
+Ab 73  19  27
+\end{lstlisting}
+
+Die nachfolgenden Berechnungen (modulo 60) funktionieren trotzdem korrekt, da intern mit Modulo-60 gerechnet wird. \textbf{Empfehlung}: Startzeiten immer im Bereich 0--59 angeben.
+
+\subsubsection{Streckenabstand genau 30 Minuten}
+
+Bei einem Abstand von genau 30 Minuten zwischen zwei Bahnhöfen kann eine permanente Kollisionssituation entstehen, die durch keine Startzeit der Rückfahrt aufgelöst werden kann. In diesem Fall kann die Ausgabe den Wert \texttt{-1} enthalten, was ein bekanntes Grenzproblem des Algorithmus ist.
+
+\subsubsection{Mehrere Kollisionen auf einer Strecke}
+
+Bei langen Strecken mit vielen gleichmäßigen Abständen können mehrere Kollisionen gleichzeitig auftreten. Das Programm behandelt alle Kollisionen korrekt, die Gesamtwartezeit und Strafe können dabei erheblich ansteigen.
+
+% ─────────────────────────────────────────
+\section{Schnellreferenz}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Aktion} & \textbf{Befehl} \\
+\midrule
+Kompilieren & \texttt{mvn compile} \\
+Programm starten & \texttt{mvn exec:java -Dexec.mainClass="de.matse.ihk.Main" -Dexec.args="<ordner>"} \\
+JAR bauen & \texttt{mvn package} \\
+Ausgabeordner & \texttt{ausgabe/} (automatisch erstellt) \\
+Standardeingabeordner & \texttt{testfaelle/} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\end{document}

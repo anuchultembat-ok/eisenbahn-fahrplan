@@ -1,3 +1,8 @@
+Eingabe:
+  Strecke   : A → B → C → D → E → F
+  Abstände  : 1 min, 1 min, 1 min, 1 min, 1 min
+  Start Hin : 00
+
 Einfache Fahrt:
 An     01  03  05  07  09
 Wa                       

@@ -1,3 +1,8 @@
+Eingabe:
+  Strecke   : A → B → C
+  Abstände  : 5 min, 7 min
+  Start Hin : 17
+
 Einfache Fahrt:
 An     22  30
 Wa           
