@@ -2563,6 +2563,112 @@ S2 – Stress (52 Sta.)  & 0    & 106276 & 0 \\
 \end{itemize}
 
 % ─────────────────────────────────────────
+\section{Benutzeranleitung}
+\label{sec:benutzeranleitung}
+
+\subsection{Voraussetzungen}
+
+\begin{itemize}
+  \item Java Development Kit (JDK) 17 oder neuer
+  \item Apache Maven 3.6 oder neuer
+  \item Betriebssystem: Linux, macOS oder Windows
+\end{itemize}
+
+\subsection{Projektstruktur}
+
+\begin{lstlisting}[language={}, numbers=none]
+eisenbahn-fahrplan/
+  pom.xml                        Maven-Projektdatei
+  run_tests.sh                   Skript zur automatischen Ausfuehrung
+  testfaelle/                    Eingabedateien (*.txt)
+  ausgabe/                       Ausgabedateien (automatisch erstellt)
+  src/main/java/de/matse/ihk/
+    Main.java                    Einstiegspunkt
+    model/                       Datenstrukturen
+    strategie/                   Fahrplanstrategien
+    io/                          Ein- und Ausgabe
+\end{lstlisting}
+
+\subsection{Kompilieren}
+
+Im Projektverzeichnis:
+\begin{lstlisting}[language=bash, numbers=none]
+mvn package -DskipTests
+\end{lstlisting}
+Erzeugt: \texttt{target/eisenbahn-fahrplan-1.0-SNAPSHOT.jar}
+
+\subsection{Ausführen}
+
+\textbf{Option A — direkt mit Java:}
+\begin{lstlisting}[language=bash, numbers=none]
+java -cp target/eisenbahn-fahrplan-1.0-SNAPSHOT.jar \
+     de.matse.ihk.Main testfaelle
+\end{lstlisting}
+
+Das erste Argument ist der Ordner mit den Eingabedateien.
+Wird kein Argument übergeben, wird \texttt{testfaelle/} als Standard verwendet.
+
+\textbf{Option B — automatisches Skript (empfohlen):}
+\begin{lstlisting}[language=bash, numbers=none]
+bash run_tests.sh
+\end{lstlisting}
+Das Skript kompiliert automatisch, führt alle Testdateien aus und listet die Ergebnisse auf.
+
+\subsection{Eingabedateiformat}
+
+Jede Eingabedatei muss folgendes Format einhalten:
+
+\begin{lstlisting}[language={}, numbers=none]
+Strecke:
+<Station1> <Station2> ... <StationN>
+Abstaende:
+<d1> <d2> ... <d(N-1)>
+Start Hinfahrt:
+<startZeit>
+\end{lstlisting}
+
+\begin{itemize}
+  \item Stationsnamen: beliebige Zeichenketten, durch Leerzeichen getrennt, eindeutig
+  \item Abstände: ganze Zahlen $\geq 1$ und $\leq 29$, jeweils in Minuten
+  \item Startzeit: ganze Zahl im Bereich $[0, 59]$
+\end{itemize}
+
+\textbf{Beispiel:}
+\begin{lstlisting}[language={}, numbers=none]
+Strecke:
+A B C D
+Abstaende:
+5 8 6
+Start Hinfahrt:
+17
+\end{lstlisting}
+
+\subsection{Ausgabe}
+
+Für jede verarbeitete Eingabedatei \texttt{xyz.txt} wird die Datei\\
+\texttt{ausgabe/xyz\_ergebnis.txt} erzeugt. Sie enthält:
+\begin{enumerate}
+  \item Eingabe-Echo (Strecke, Abstände, Startzeit)
+  \item Tabelle Einfache Fahrt
+  \item Tabelle Einseitiges Warten
+  \item Tabelle Beidseitiges Warten
+\end{enumerate}
+Jede Tabelle zeigt Ankunft, Wartezeit und Abfahrt für Hin- und Rückfahrt
+sowie Gesamtdauer, Summe der Wartezeiten und Summe der Strafen.
+
+\subsection{Fehlermeldungen}
+
+Ungültige Eingabedateien werden übersprungen.
+Fehlermeldungen erscheinen auf der Standardfehlerausgabe (\texttt{stderr}):
+
+\begin{lstlisting}[language={}, numbers=none]
+Validierungsfehler in val_01.txt:
+  - Startzeit 60 ungueltig -- erlaubter Bereich: 0..59
+\end{lstlisting}
+
+Die restlichen Dateien werden unabhängig davon weiterverarbeitet.
+
+% ─────────────────────────────────────────
 \section{Objektorientierte Programmkonzeption}
 \label{sec:oop}
 
@@ -3291,7 +3397,10 @@ werden still ignoriert (kein Exception-Wurf bei leeren Zeilen).
 normalisiert. Der Wert wird direkt von \texttt{Integer.parseInt()} übernommen.
 
 % ─────────────────────────────────────────
-\section{Zusammenfassung}
+\section{Zusammenfassung und Ausblick}
+\label{sec:zusammenfassung}
+
+\subsection{Zusammenfassung}
 
 Das Programm setzt das \textbf{Strategy Pattern} ein, um drei verschiedene Fahrplanberechnungsalgorithmen hinter einer einheitlichen Schnittstelle (\texttt{FahrplanStrategie}) zu kapseln. Die Kernalgorithmen werden als gemeinsame statische Methoden in der Basisklasse implementiert und von den konkreten Strategien wiederverwendet.
 
@@ -3302,5 +3411,39 @@ Ein wichtiges Entwurfsmerkmal ist die \textbf{gemeinsame Objektreferenz}: Alle d
 Die \textbf{Kollisionserkennung} basiert auf einer Intervall-Überschneidungsprüfung auf einer Modulo-60-Uhr, die auch den Übergang von Minute 59 auf Minute 0 korrekt behandelt.
 
 Die \textbf{Ausgabe} nutzt ein Funktionsinterface (\texttt{Function<BahnhofNode, String>}), um mit einer einzigen \texttt{printRow()}-Hilfsmethode alle sieben Zeilen der tabellarischen Darstellung zu erzeugen, ohne Code zu duplizieren.
+
+Die \textbf{Eingabevalidierung} durch \texttt{EingabeValidator} stellt sicher, dass das Programm bei ungültigen Eingaben eine klare Fehlermeldung liefert, statt mit falschen Ergebnissen oder einem Absturz zu reagieren. Sie schützt insbesondere vor zwei bekannten Randbedingungen: dem uninitialisierten Rückgabewert in \texttt{BeidseitigesWartenStrategie} bei Abstand $\geq 30$ (BUG-01) und negativen Zeitangaben durch Startzeiten außerhalb $[0,59]$ (BUG-02).
+
+\subsection{Ausblick}
+
+Das vorliegende Programm löst das gestellte Problem vollständig und korrekt.
+Für eine produktive Weiterentwicklung bieten sich folgende Erweiterungen an:
+
+\begin{itemize}
+  \item \textbf{Mehrzügiger Betrieb:} Aktuell verkehrt je ein Zug pro Richtung.
+    Eine Erweiterung auf mehrere Zugpaare würde die Kollisionserkennung auf
+    $n$-fache Intervallüberschneidungen ausweiten und erfordert eine Anpassung
+    des Datenmodells (Liste von Abfahrtszeiten pro Knoten statt eines einzelnen Wertes).
+
+  \item \textbf{Reale Zeitdarstellung (HH:MM):} Das Modulo-60-Modell abstrahiert von
+    der Tageszeit. Eine Erweiterung auf absolute Uhrzeiten im Format HH:MM würde
+    die Ausgabe praxisnaher machen, ohne die Kernalgorithmen zu ändern — lediglich
+    die Darstellung in \texttt{AusgabeManager} müsste angepasst werden.
+
+  \item \textbf{Grafische Ausgabe:} Ein Weg-Zeit-Diagramm (Strecke auf der Y-Achse,
+    Zeit auf der X-Achse) würde Kollisionen und Wartezeiten visuell sofort erkennbar
+    machen. Dies ließe sich als zusätzliche Strategie-Klasse oder als separates
+    Ausgabemodul implementieren.
+
+  \item \textbf{Konfigurierbare Strafformel:} Die quadratische Strafe $(w^2)$ ist
+    fest im Code verankert. Eine abstrakte Schnittstelle \texttt{Strafformel} würde
+    es erlauben, lineare, kubische oder benutzerdefinierte Bewertungsfunktionen
+    austauschbar einzusetzen — eine natürliche Erweiterung des Strategy Patterns.
+
+  \item \textbf{Automatische Testvergleiche:} Das vorhandene Skript \texttt{run\_tests.sh}
+    führt alle Testfälle aus und schreibt Ergebnisdateien. Eine Erweiterung um einen
+    Soll-/Ist-Vergleich (diff gegen Referenzausgaben) würde Regressionen automatisch
+    erkennen und wäre der nächste Schritt hin zu einem vollständigen Regressionstestsystem.
+\end{itemize}
 
 \end{document}
