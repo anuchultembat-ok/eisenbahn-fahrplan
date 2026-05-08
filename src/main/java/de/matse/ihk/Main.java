@@ -15,8 +15,8 @@ import de.matse.ihk.strategie.EinseitigesWartenStrategie;
 import de.matse.ihk.strategie.FahrplanStrategie;
 
 /**
- * Entry point. Reads every .txt file in the input directory, validates it,
- * runs all three strategies and writes one result file per input.
+ * Einstiegspunkt. Liest alle .txt-Dateien im Eingabeordner, validiert sie,
+ * führt alle drei Strategien aus und schreibt je eine Ergebnisdatei.
  */
 public class Main {
     public static void main(String[] args) throws IOException {

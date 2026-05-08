@@ -4,8 +4,8 @@ import de.matse.ihk.model.BahnhofNode;
 import de.matse.ihk.model.BahnhofPlan;
 
 /**
- * Only the return train waits at collision points; the forward journey is unchanged.
- * Penalty = (sum of all {@code wartezeitRueck})².
+ * Nur der Rückzug wartet an Kollisionspunkten; die Hinfahrt bleibt unverändert.
+ * Strafe = (Summe aller {@code wartezeitRueck})².
  */
 public class EinseitigesWartenStrategie extends FahrplanStrategie {
 
@@ -13,8 +13,8 @@ public class EinseitigesWartenStrategie extends FahrplanStrategie {
     public String getStrategieName() { return "Einseitiges Warten"; }
 
     /**
-     * Reads the forward-journey arrival time left by {@link EinfacheFahrtStrategie},
-     * then runs the two-phase return calculation with collision correction.
+     * Liest die von {@link EinfacheFahrtStrategie} hinterlegte Ankunftszeit der Hinfahrt
+     * und führt die zweiphasige Rückfahrtberechnung mit Kollisionskorrektur durch.
      */
     @Override
     public void berechneFahrplan(BahnhofPlan plan, int startZeit) {
@@ -23,7 +23,7 @@ public class EinseitigesWartenStrategie extends FahrplanStrategie {
         rueckfahrtMitKollision(aktuellerPlan, startZeitRueck);
     }
 
-    /** Returns (Σ wartezeitRueck)². */
+    /** Gibt (Σ wartezeitRueck)² zurück. */
     @Override
     public int getSummeStrafen() {
         int summe = 0;

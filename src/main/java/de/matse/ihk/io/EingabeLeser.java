@@ -9,17 +9,17 @@ import de.matse.ihk.model.BahnhofPlan;
 import de.matse.ihk.model.SimulationsDaten;
 
 /**
- * Reads a plain-text input file and builds a {@link SimulationsDaten} object from it.
- * The file format uses keyword lines ({@code Strecke:}, {@code Abstaende:},
- * {@code Start Hinfahrt:}) followed by their data on the next line.
+ * Liest eine Textdatei und erzeugt daraus ein {@link SimulationsDaten}-Objekt.
+ * Das Dateiformat verwendet Schlüsselwortzeilen ({@code Strecke:}, {@code Abstaende:},
+ * {@code Start Hinfahrt:}), gefolgt von den Daten in der nächsten Zeile.
  */
 public class EingabeLeser {
 
     /**
-     * Parses {@code dateiPfad} and returns the station plan together with the start time.
-     * Unknown lines are silently ignored; no normalisation of startZeit is performed.
+     * Liest {@code dateiPfad} ein und gibt den Streckenplan mit der Startzeit zurück.
+     * Unbekannte Zeilen werden stillschweigend ignoriert; die Startzeit wird nicht normalisiert.
      *
-     * @throws IOException if the file cannot be read
+     * @throws IOException wenn die Datei nicht gelesen werden kann
      */
     public static SimulationsDaten leseDatei(String dateiPfad) throws IOException {
         List<String> zeilen = Files.readAllLines(Path.of(dateiPfad));

@@ -3,9 +3,9 @@ package de.matse.ihk.strategie;
 import de.matse.ihk.model.BahnhofPlan;
 
 /**
- * Calculates a collision-free timetable without any waiting time.
- * Collisions are visible in the output (marked with 'x') but not resolved.
- * Penalty is always zero.
+ * Berechnet den Fahrplan ohne jede Wartezeit.
+ * Kollisionen sind in der Ausgabe sichtbar (markiert mit 'x'), werden aber nicht aufgelöst.
+ * Die Strafe beträgt stets null.
  */
 public class EinfacheFahrtStrategie extends FahrplanStrategie {
     @Override
@@ -14,7 +14,7 @@ public class EinfacheFahrtStrategie extends FahrplanStrategie {
     @Override
     public String getStrategieName() { return "Einfache Fahrt"; }
 
-    /** Runs forward journey from startZeit, then starts the return trip one minute after arrival at the last station. */
+    /** Führt die Hinfahrt ab startZeit durch und startet die Rückfahrt eine Minute nach Ankunft am letzten Bahnhof. */
     @Override
     public void berechneFahrplan(BahnhofPlan plan, int startZeit) {
         this.aktuellerPlan = plan;

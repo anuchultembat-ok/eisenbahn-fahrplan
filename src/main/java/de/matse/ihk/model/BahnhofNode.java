@@ -1,17 +1,17 @@
 package de.matse.ihk.model;
 
 /**
- * One station in the doubly linked list that models the railway track.
- * Stores arrival, departure and waiting-time values for both travel directions,
- * plus the pointer fields {@code next}/{@code prev} and the distance to the next station.
+ * Ein Bahnhof in der doppelt verketteten Liste, die die Eisenbahnstrecke abbildet.
+ * Speichert Ankunft, Abfahrt und Wartezeit für beide Fahrtrichtungen
+ * sowie die Zeigerfelder {@code next}/{@code prev} und den Abstand zum nächsten Bahnhof.
  */
 public class BahnhofNode {
     private String name;
     private Integer ankunfthin;
     private Integer abfahrthin;
-    /** Waiting time inserted by a strategy for the forward journey (default 0). */
+    /** Wartezeit für die Hinfahrt, eingetragen durch eine Strategie (Standard 0). */
     private Integer wartezeitHin = 0;
-    /** Waiting time inserted by a strategy for the return journey (default 0). */
+    /** Wartezeit für die Rückfahrt, eingetragen durch eine Strategie (Standard 0). */
     private Integer wartezeitRueck = 0;
 
     private Integer ankunftrueck;
@@ -19,7 +19,7 @@ public class BahnhofNode {
 
     private BahnhofNode next;
     private BahnhofNode prev;
-    /** Travel time in minutes from this station to {@code next}. */
+    /** Fahrtzeit in Minuten von diesem Bahnhof zum nächsten ({@code next}). */
     private int distanceToNext;
 
     public BahnhofNode getNext() {
@@ -41,8 +41,8 @@ public class BahnhofNode {
     }
 
     /**
-     * Returns true if both trains occupy the segment between this node and {@code next}
-     * at the same minute. Handles Modulo-60 wrap-around (e.g. interval [55, 5]).
+     * Gibt true zurück, wenn beide Züge das Segment zwischen diesem Knoten und {@code next}
+     * zur selben Minute belegen. Berücksichtigt den Modulo-60-Überlauf (z.B. Intervall [55, 5]).
      */
     public boolean isKollision() {
         if (this.next == null) return false;
@@ -53,7 +53,7 @@ public class BahnhofNode {
         return checkOverlap(hStart, hEnde, rStart, rEnde);
     }
 
-    /** Iterates all 60 minutes and returns true on the first minute both intervals are active. */
+    /** Prüft alle 60 Minuten und gibt true zurück, sobald beide Intervalle gleichzeitig aktiv sind. */
     private boolean checkOverlap(int s1, int e1, int s2, int e2) {
         for (int m = 0; m < 60; m++) {
             if (isTimeInInterval(m, s1, e1) && isTimeInInterval(m, s2, e2))
@@ -63,8 +63,8 @@ public class BahnhofNode {
     }
 
     /**
-     * Checks whether minute {@code t} falls inside [start, ende] on the Modulo-60 clock.
-     * When start > ende the interval wraps around midnight (e.g. [55, 5]).
+     * Prüft, ob Minute {@code t} im Intervall [start, ende] auf der Modulo-60-Uhr liegt.
+     * Bei start > ende überschreitet das Intervall die Stundengrenze (z.B. [55, 5]).
      */
     private boolean isTimeInInterval(int t, int start, int ende) {
         if (start <= ende) return t >= start && t <= ende;

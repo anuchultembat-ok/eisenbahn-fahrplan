@@ -10,14 +10,14 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Validates a parsed {@link SimulationsDaten} object before the strategies run.
- * Returns a list of error messages; an empty list means the data is valid.
+ * Überprüft ein eingelesenes {@link SimulationsDaten}-Objekt vor dem Strategielauf.
+ * Gibt eine Liste von Fehlermeldungen zurück; eine leere Liste bedeutet gültige Eingabe.
  */
 public class EingabeValidator {
 
     /**
-     * Runs all validation checks and returns every violation found.
-     * Callers should print the list and skip the file when it is non-empty.
+     * Führt alle Prüfungen aus und gibt alle gefundenen Verstöße zurück.
+     * Aufrufer sollten die Liste ausgeben und die Datei überspringen, wenn sie nicht leer ist.
      */
     public static List<String> validiere(SimulationsDaten daten) {
         List<String> fehler = new ArrayList<>();
@@ -26,7 +26,7 @@ public class EingabeValidator {
         return fehler;
     }
 
-    /** Convenience wrapper — returns true only when {@link #validiere} yields no errors. */
+    /** Kurzform — gibt true zurück, wenn {@link #validiere} keine Fehler meldet. */
     public static boolean istGueltig(SimulationsDaten daten) {
         return validiere(daten).isEmpty();
     }

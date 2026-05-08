@@ -11,15 +11,15 @@ import de.matse.ihk.model.BahnhofPlan;
 import de.matse.ihk.strategie.FahrplanStrategie;
 
 /**
- * Formats and stores simulation results.
- * All methods are static — this class is not meant to be instantiated.
+ * Formatiert und speichert die Simulationsergebnisse.
+ * Alle Methoden sind statisch — diese Klasse ist nicht zur Instanziierung gedacht.
  */
 public class AusgabeManager {
 
     /**
-     * Produces a human-readable summary of the raw input data: station names,
-     * segment distances and the scheduled departure time.
-     * Intended to appear once per file, before the three strategy blocks.
+     * Gibt eine lesbare Zusammenfassung der Eingabedaten aus: Stationsnamen,
+     * Streckenabstände und die geplante Abfahrtszeit.
+     * Erscheint einmal pro Datei, vor den drei Strategieblöcken.
      */
     public static String druckeEingabe(BahnhofPlan plan, int startZeit) {
         StringBuilder sb = new StringBuilder();
@@ -51,11 +51,11 @@ public class AusgabeManager {
     }
 
     /**
-     * Builds the full 7-row timetable for one strategy plus the statistics block.
+     * Erstellt die vollständige 7-zeilige Fahrplantabelle einer Strategie samt Statistikblock.
      *
-     * @param strategie the strategy whose computed data is rendered
-     * @param plan      the plan whose nodes hold the computed times
-     * @return formatted string ready to print or save
+     * @param strategie die Strategie, deren berechnete Daten dargestellt werden
+     * @param plan      der Plan, dessen Knoten die berechneten Zeiten enthalten
+     * @return formatierter Text zum Ausgeben oder Speichern
      */
     public static String druckeErgebnis(FahrplanStrategie strategie, BahnhofPlan plan) {
         StringBuilder sb = new StringBuilder();
@@ -87,11 +87,11 @@ public class AusgabeManager {
     }
 
     /**
-     * Renders one horizontal row of the output table.
+     * Erzeugt eine horizontale Zeile der Ausgabetabelle.
      *
-     * @param label          3-character row label (e.g. {@code "An "})
-     * @param wertExtraktor  lambda extracting the formatted cell value from a node
-     * @param isStationRow   when true, appends {@code "x"} after nodes whose outgoing segment has a collision
+     * @param label          3-stellige Zeilenbeschriftung (z.B. {@code "An "})
+     * @param wertExtraktor  Lambda, das den formatierten Zellwert aus einem Knoten extrahiert
+     * @param isStationRow   bei true wird {@code "x"} nach Knoten mit Kollision im Folgesegment angehängt
      */
     private static String printRow(String label,
                                    Function<BahnhofNode, String> wertExtraktor,
@@ -112,8 +112,8 @@ public class AusgabeManager {
     }
 
     /**
-     * Returns the minimum travel time: sum of all segment distances plus one stop-minute
-     * per intermediate station (all stations except first and last).
+     * Gibt die Mindestfahrtdauer zurück: Summe aller Streckenabstände plus je eine Halteminute
+     * pro Zwischenbahnhof (alle Stationen außer der ersten und letzten).
      */
     public static int berechneMindestdauer(BahnhofPlan plan) {
         int dauer = 0;
@@ -129,8 +129,8 @@ public class AusgabeManager {
     }
 
     /**
-     * Writes {@code inhalt} to {@code ausgabe/<dateiname without .txt>_ergebnis.txt}.
-     * Creates the output directory if it does not already exist.
+     * Schreibt {@code inhalt} in {@code ausgabe/<dateiname ohne .txt>_ergebnis.txt}.
+     * Erstellt das Ausgabeverzeichnis, falls es noch nicht existiert.
      */
     public static void speicherErgebnis(String dateiname, String inhalt) {
         File verzeichnis = new File("ausgabe");
