@@ -1385,93 +1385,188 @@ Die Einfache Fahrt zeigt Strafe 0, weil sie Kollisionen gar nicht behebt und kei
 \end{hinweisbox}
 
 % ─────────────────────────────────────────
-\section{Ausgabe (AusgabeManager)}
+\section{Ausgabe (\texttt{AusgabeManager})}
+\label{sec:ausgabe}
 
-\subsection{Überblick}
+\subsection{Überblick und Entwurfsentscheidung}
 
-Die Klasse \texttt{AusgabeManager} übernimmt die gesamte Formatierung und Speicherung der Ergebnisse. Sie enthält vier Methoden:
+Die Klasse \texttt{AusgabeManager} ist für die gesamte Formatierung und persistente Speicherung
+der Simulationsergebnisse zuständig.
+Sie ist bewusst als reine \textbf{Utility-Klasse} entworfen: alle Methoden sind \texttt{static},
+es gibt keinen Konstruktor, und die Klasse hält keinen eigenen Zustand.
+Diese Entscheidung vermeidet unnötige Instanziierung und hält die Ausgabelogik von der
+Berechnungslogik sauber getrennt (\emph{Separation of Concerns}).
+
+Die Klasse enthält fünf Methoden:
 
 \begin{center}
-\begin{tabular}{ll}
+\begin{tabular}{lll}
 \toprule
-\textbf{Methode} & \textbf{Aufgabe} \\
+\textbf{Methode} & \textbf{Sichtbarkeit} & \textbf{Aufgabe} \\
 \midrule
-\texttt{druckeErgebnis(strategie, plan)} & Baut den Ausgabe-String auf und gibt ihn zurück \\
-\texttt{printRow(label, extraktor, plan, isStation)} & Erzeugt eine einzelne Zeile der Tabelle \\
-\texttt{berechneMindestdauer(plan)} & Berechnet die Fahrzeit ohne Wartezeiten \\
-\texttt{speicherErgebnis(dateiname, inhalt)} & Schreibt den Ausgabe-String in eine Datei \\
+\texttt{druckeEingabe(plan, startZeit)}           & \texttt{public}  & Eingabe-Echo vor den Strategieblöcken \\
+\texttt{druckeErgebnis(strategie, plan)}           & \texttt{public}  & Vollständige 7-zeilige Fahrplantabelle \\
+\texttt{printRow(label, extraktor, plan, isStation)}& \texttt{private} & Einzelne horizontale Tabellenzeile \\
+\texttt{berechneMindestdauer(plan)}                & \texttt{public}  & Fahrzeit ohne Wartezeiten \\
+\texttt{speicherErgebnis(dateiname, inhalt)}       & \texttt{public}  & Ergebnis als Textdatei speichern \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\subsection{druckeErgebnis()}
+Der Ablauf in \texttt{Main.java} ist fest geregelt: Pro Eingabedatei wird zuerst
+\texttt{druckeEingabe()} aufgerufen (einmalig), dann für jede der drei Strategien
+\texttt{druckeErgebnis()}. Alle Teilstrings werden in einem \texttt{StringBuilder}
+gesammelt und am Ende mit \texttt{speicherErgebnis()} in eine Datei geschrieben.
 
-Diese Methode baut den gesamten Ausgabe-String für eine Strategie zusammen:
+\subsection{\texttt{druckeEingabe()} — Eingabe-Echo}
 
-\begin{lstlisting}[caption={AusgabeManager.druckeErgebnis()}]
-public static String druckeErgebnis(FahrplanStrategie strategie, BahnhofPlan plan) {
+Bevor die drei Strategieblöcke ausgegeben werden, druckt \texttt{druckeEingabe()} die
+eingelesenen Rohdaten als lesbares Echo.
+Dadurch kann der Leser der Ergebnisdatei sofort erkennen, mit welchen Eingaben
+die Simulation gerechnet wurde, ohne die Originaldatei öffnen zu müssen.
+
+Die Methode traversiert die doppelt verkettete Liste einmal von \texttt{head} bis \texttt{tail},
+um die Stationsnamen mit \texttt{→} verknüpft auszugeben.
+Anschließend wird die Liste ein zweites Mal durchlaufen, um die Abstände zwischen je
+zwei benachbarten Knoten (\texttt{distanceToNext}) als kommaseparierte Liste zu formatieren.
+Die Startzeit wird mit \texttt{\%02d} immer zweistellig dargestellt (z.\,B. \texttt{07} statt \texttt{7}).
+
+\textbf{Beispielausgabe} für Beispiel2:
+\begin{verbatim}
+Eingabe:
+  Strecke   : A -> B -> C -> D -> E -> F -> G
+  Abstaende : 5 min, 9 min, 6 min, 7 min, 3 min, 2 min
+  Start Hin : 17
+\end{verbatim}
+
+\subsection{\texttt{druckeErgebnis()} — Fahrplantabelle}
+
+Diese Methode erzeugt die vollständige, siebenzeilige Fahrplantabelle für eine Strategie.
+Ihr Design folgt dem Prinzip \emph{Don't Repeat Yourself (DRY)}:
+Statt sieben separate Schleifen über die Knotenliste zu schreiben, gibt es nur
+eine einzige private Hilfsmethode \texttt{printRow()}, die für alle sieben Zeilen
+wiederverwendet wird.
+
+\textbf{Aufbau der Tabelle:}
+Die Ausgabe ist so strukturiert, dass jeder Bahnhof eine \emph{Spalte} belegt
+und jede Zeile ein anderes Zeitattribut zeigt.
+Das ist ungewöhnlich — klassische Tabellen haben Datensätze in Zeilen —
+aber entspricht dem in der Aufgabenstellung geforderten Format.
+
+\begin{center}
+\begin{tabular}{cll}
+\toprule
+\textbf{Zeile} & \textbf{Bezeichnung} & \textbf{Inhalt}\\
+\midrule
+1 & \texttt{An} (Hin)   & Ankunftszeit der Hinfahrt an jedem Bahnhof\\
+2 & \texttt{Wa} (Hin)   & Wartezeit der Hinfahrt (leer wenn 0)\\
+3 & \texttt{Ab} (Hin)   & Abfahrtszeit der Hinfahrt\\
+4 & Bahnhöfe            & Stationsnamen; \texttt{x} nach Kollisionssegmenten\\
+5 & \texttt{Ab} (Rück)  & Abfahrtszeit der Rückfahrt\\
+6 & \texttt{Wa} (Rück)  & Wartezeit der Rückfahrt (leer wenn 0)\\
+7 & \texttt{An} (Rück)  & Ankunftszeit der Rückfahrt\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Nach der Tabelle folgen drei Statistikzeilen:
+\begin{itemize}
+  \item \textbf{Gesamtdauer} Hin/Rück: $\text{Mindestdauer} + \text{SummeWartezeitenHin}$ bzw. $+\text{SummeWartezeitenRück}$
+  \item \textbf{Summe Wartezeiten} Hin/Rück: Summe aller \texttt{wartezeitHin} bzw. \texttt{wartezeitRueck}-Felder
+  \item \textbf{Summe Strafen}: delegiert an \texttt{strategie.getSummeStrafen()}
+\end{itemize}
+
+Die Methode \emph{liest} den Plan nur — sie schreibt keine Werte zurück.
+Das macht sie sicher für beliebige Aufruffolgen.
+
+\begin{lstlisting}[caption={AusgabeManager.druckeErgebnis() -- vollständig}]
+public static String druckeErgebnis(FahrplanStrategie strategie,
+                                    BahnhofPlan plan) {
     StringBuilder sb = new StringBuilder();
     sb.append(strategie.getStrategieName()).append(":\n");
 
-    // Hinfahrt-Zeilen
-    sb.append(printRow("An ", n -> n.getAnkunfthin() != null
-        ? String.format("%02d", n.getAnkunfthin()) : "  ", plan, false));
-    sb.append(printRow("Wa ", n -> n.getWartezeitHin() > 0
-        ? String.format("%02d", n.getWartezeitHin()) : "  ", plan, false));
-    sb.append(printRow("Ab ", n -> n.getAbfahrthin() != null
-        ? String.format("%02d", n.getAbfahrthin()) : "  ", plan, false));
-
-    // Bahnhofnamen-Zeile (mit Kollisionsmarkierung)
-    sb.append(printRow("   ", n -> String.format("%2s", n.getName()), plan, true));
-
-    // Rueckfahrt-Zeilen
+    // 7 Tabellenzeilen ueber printRow() aufgebaut
+    sb.append(printRow("An ", n -> n.getAnkunfthin()   != null
+        ? String.format("%02d", n.getAnkunfthin())   : "  ", plan, false));
+    sb.append(printRow("Wa ", n -> n.getWartezeitHin()  > 0
+        ? String.format("%02d", n.getWartezeitHin())  : "  ", plan, false));
+    sb.append(printRow("Ab ", n -> n.getAbfahrthin()   != null
+        ? String.format("%02d", n.getAbfahrthin())   : "  ", plan, false));
+    sb.append(printRow("   ", n -> String.format("%2s", n.getName()),
+        plan, true));                                 // Bahnhofzeile
     sb.append(printRow("Ab ", n -> n.getAbfahrtrueck() != null
         ? String.format("%02d", n.getAbfahrtrueck()) : "  ", plan, false));
     sb.append(printRow("Wa ", n -> n.getWartezeitRueck() > 0
-        ? String.format("%02d", n.getWartezeitRueck()) : "  ", plan, false));
+        ? String.format("%02d", n.getWartezeitRueck()): "  ", plan, false));
     sb.append(printRow("An ", n -> n.getAnkunftrueck() != null
         ? String.format("%02d", n.getAnkunftrueck()) : "  ", plan, false));
 
-    // Statistik
+    // Statistikblock
     int mindestdauer = berechneMindestdauer(plan);
     int warteHin = 0, warteRueck = 0;
-    BahnhofNode current = plan.getHead();
-    while (current != null) {
-        warteHin  += current.getWartezeitHin();
-        warteRueck += current.getWartezeitRueck();
-        current = current.getNext();
+    BahnhofNode cur = plan.getHead();
+    while (cur != null) {
+        warteHin   += cur.getWartezeitHin();
+        warteRueck += cur.getWartezeitRueck();
+        cur = cur.getNext();
     }
-    sb.append(String.format("Gesamtdauer Hinfahrt, Rueckfahrt       : %d, %d%n",
+    sb.append(String.format(
+        "Gesamtdauer Hinfahrt, Rueckfahrt       : %d, %d%n",
         mindestdauer + warteHin, mindestdauer + warteRueck));
-    sb.append(String.format("Summe Wartezeiten Hinfahrt, Rueckfahrt : %d, %d%n",
+    sb.append(String.format(
+        "Summe Wartezeiten Hinfahrt, Rueckfahrt : %d, %d%n",
         warteHin, warteRueck));
-    sb.append(String.format("Summe Strafen                         : %d%n",
+    sb.append(String.format(
+        "Summe Strafen                          : %d%n",
         strategie.getSummeStrafen()));
     return sb.toString();
 }
 \end{lstlisting}
 
-Die Methode arbeitet rein auf Lesezugriff -- sie verändert keine Daten im \texttt{BahnhofPlan}.
+\subsection{\texttt{printRow()} — Hilfsmethode für eine Tabellenzeile}
 
-\subsection{printRow() -- Hilfsmethode für horizontale Zeilen}
+\texttt{printRow()} ist das technische Herzstück der Ausgabe.
+Sie erzeugt eine einzelne horizontale Zeile der Tabelle, indem sie die
+doppelt verkettete Liste einmal von \texttt{head} bis \texttt{tail} traversiert.
 
-Das besondere Layout der Ausgabe (Bahnhöfe als Spalten, Zeiten als Zeilen) wird durch \texttt{printRow()} realisiert:
+\textbf{Das Funktionsinterface als Schlüssel:}
+Der Parameter \texttt{wertExtraktor} hat den Typ \texttt{Function<BahnhofNode, String>}.
+Das ist ein Java-8-Funktionsinterface — es erwartet ein Lambda der Form
+\texttt{node -> String}.
+Jeder der sieben Aufrufe übergibt ein anderes Lambda, das entscheidet,
+welches Feld des Knotens in dieser Zeile angezeigt wird.
 
-\begin{lstlisting}[caption={AusgabeManager.printRow() mit Funktionsinterface}]
+So entstehen alle sieben Zeilen mit \emph{derselben} Schleife und \emph{demselben} Abstandsformatierungscode.
+Ohne dieses Muster würde die Schleife \texttt{while (current != null)} siebenmal
+identisch im Code stehen — eine klassische Code-Duplikation.
+
+\textbf{Kollisionsmarkierung:}
+Nur in der Bahnhof-Zeile (\texttt{isStationRow = true}) wird zwischen zwei Knoten
+geprüft, ob das Segment eine Kollision hat (\texttt{current.isKollision()}).
+Falls ja, wird \texttt{"x "} statt \texttt{"  "} zwischen den Spaltennamen eingefügt.
+In allen anderen Zeilen erscheinen immer zwei Leerzeichen als Trennzeichen.
+
+\textbf{Nullwerte:}
+Die Felder \texttt{ankunfthin} und \texttt{ankunftrueck} sind \texttt{Integer}-Objekte
+(nicht \texttt{int}), weil der erste bzw. letzte Bahnhof in einer Richtung
+keine Ankunftszeit hat. Das Lambda gibt in diesem Fall \texttt{"  "} zurück,
+sodass die Tabellenspalte leer bleibt statt \texttt{null} zu drucken.
+
+\begin{lstlisting}[caption={printRow() -- Implementierung}]
 private static String printRow(
         String label,
         Function<BahnhofNode, String> wertExtraktor,
         BahnhofPlan plan,
         boolean isStationRow) {
     StringBuilder row = new StringBuilder();
-    row.append(String.format("%-3s", label));
+    row.append(String.format("%-3s", label)); // 3 Zeichen links-buendig
+
     BahnhofNode current = plan.getHead();
     while (current != null) {
-        row.append(wertExtraktor.apply(current));
-        if (current.getNext() != null) {
-            // 'x' zwischen zwei Bahnhofnamen bei Kollision
-            row.append(isStationRow && current.isKollision() ? "x " : "  ");
-        }
+        row.append(wertExtraktor.apply(current)); // Lambda aufrufen
+        if (current.getNext() != null)
+            row.append(isStationRow && current.isKollision()
+                ? "x " : "  ");  // Kollisionsmarkierung nur in Bahnhofzeile
         current = current.getNext();
     }
     row.append("\n");
@@ -1479,81 +1574,294 @@ private static String printRow(
 }
 \end{lstlisting}
 
-Der Schlüssel liegt im Parameter \texttt{wertExtraktor}: Er ist ein \texttt{Function<BahnhofNode, String>} -- also ein Java-Lambda, das für jeden Knoten den anzuzeigenden String bestimmt. Dadurch kann \texttt{printRow()} für \emph{alle} sieben Zeilen (An-Hin, Wa-Hin, Ab-Hin, Bahnhöfe, Ab-Rück, Wa-Rück, An-Rück) wiederverwendet werden, ohne die Schleife über die Liste zu duplizieren.
-
-Beispiel für den Aufruf der Ankunftszeile der Hinfahrt:
+\textbf{Beispiel:} Aufruf für die Ankunftszeile der Hinfahrt:
 \begin{lstlisting}
 printRow("An ", n -> n.getAnkunfthin() != null
     ? String.format("%02d", n.getAnkunfthin()) : "  ", plan, false);
 \end{lstlisting}
+Das Lambda liefert für Bahnhof A (erster Bahnhof, hat keine Ankunft)
+\texttt{"  "} und für alle anderen Bahnhöfe z.\,B. \texttt{"22"} oder \texttt{"04"} (zweistellig).
 
-Das Lambda gibt \texttt{"  "} (zwei Leerzeichen) zurück, wenn \texttt{ankunfthin == null} ist (z.\,B. beim ersten Bahnhof, der keine Ankunftszeit hat), andernfalls die zweistellige Minutenangabe.
+\subsection{\texttt{berechneMindestdauer()} — Basisfahrtdauer}
 
-\subsection{berechneMindestdauer()}
+Die Mindestdauer ist die Fahrtzeit, die \emph{unabhängig von der Strategie} immer anfällt.
+Sie setzt sich zusammen aus:
+\begin{enumerate}
+  \item \textbf{Summe aller Streckenabstände} (\texttt{distanceToNext}): die reine Fahrzeit
+    auf den Segmenten.
+  \item \textbf{Haltezeiten an Zwischenbahnhöfen}: An jedem Bahnhof außer dem ersten und dem
+    letzten hält der Zug genau 1 Minute. Bei $n$ Stationen gibt es $n-2$ Zwischenbahnhöfe.
+\end{enumerate}
 
-\begin{lstlisting}[caption={Berechnung der Mindestfahrtdauer ohne Wartezeiten}]
+\textbf{Formel:}
+\[
+  \text{Mindestdauer} = \sum_{i=1}^{n-1} d_i + (n-2)
+  \quad \text{für } n \geq 3 \text{ Stationen}
+\]
+Für $n = 2$ Stationen (kein Zwischenbahnhof) gilt $\text{Mindestdauer} = d_1$.
+
+\textbf{Beispiel} Strecke A–B–C–D–E–F–G mit Abständen 5, 9, 6, 7, 3, 2:
+\[
+  \text{Mindestdauer} = (5+9+6+7+3+2) + (7-2) = 32 + 5 = 37\text{ min}
+\]
+
+Die tatsächliche Gesamtdauer einer Strategie ergibt sich dann als:
+\[
+  \text{Gesamtdauer} = \text{Mindestdauer} + \sum \text{wartezeitHin}
+  \quad \text{bzw.} \quad + \sum \text{wartezeitRueck}
+\]
+
+\begin{lstlisting}[caption={berechneMindestdauer()}]
 public static int berechneMindestdauer(BahnhofPlan plan) {
     int dauer = 0;
-    int anzahlBahnhoefe = 0;
-    BahnhofNode current = plan.getHead();
-    while (current != null) {
-        anzahlBahnhoefe++;
-        if (current.getNext() != null)
-            dauer += current.getDistanceToNext();
-        current = current.getNext();
+    int anzahl = 0;
+    BahnhofNode cur = plan.getHead();
+    while (cur != null) {
+        anzahl++;
+        if (cur.getNext() != null) dauer += cur.getDistanceToNext();
+        cur = cur.getNext();
     }
-    // 1 Min Haltezeit fuer jeden Zwischenbahnhof
-    if (anzahlBahnhoefe > 2)
-        dauer += (anzahlBahnhoefe - 2);
+    if (anzahl > 2) dauer += (anzahl - 2); // Haltezeiten Zwischenbahnhoefe
     return dauer;
 }
 \end{lstlisting}
 
-Die Mindestdauer ist die Summe aller Streckenabstände plus je eine Minute Haltezeit pro Zwischenbahnhof (Start- und Endbahnhof zählen nicht). Sie wird von jeder Strategie als gemeinsame Basis genutzt; die tatsächliche Gesamtdauer ergibt sich als $\texttt{Mindestdauer} + \texttt{SummeWartezeiten}$.
+\subsection{\texttt{speicherErgebnis()} — Dateiausgabe}
 
-\subsection{speicherErgebnis()}
+Diese Methode schreibt den vollständig aufgebauten Ausgabe-String in eine Textdatei.
+Sie übernimmt dabei zwei Aufgaben:
+\begin{enumerate}
+  \item \textbf{Verzeichnis anlegen:} Das Unterverzeichnis \texttt{ausgabe/} wird beim
+    ersten Aufruf automatisch erstellt, falls es noch nicht existiert.
+    Nachfolgende Aufrufe erkennen das Verzeichnis als bereits vorhanden.
+  \item \textbf{Dateinamen ableiten:} Aus dem Eingabedateinamen (z.\,B. \texttt{Beispiel2.txt})
+    wird der Ausgabedateiname \texttt{Beispiel2\_ergebnis.txt} gebildet, indem
+    \texttt{.txt} entfernt und \texttt{\_ergebnis.txt} angehängt wird.
+\end{enumerate}
 
-\begin{lstlisting}[caption={Ergebnis in Datei schreiben}]
+Die Methode verwendet \texttt{try-with-resources} für den \texttt{BufferedWriter},
+sodass die Datei auch bei einer Ausnahme garantiert geschlossen wird.
+Ein Schreibfehler wird auf \texttt{stderr} ausgegeben, bricht aber die Verarbeitung
+weiterer Dateien nicht ab.
+
+\begin{lstlisting}[caption={speicherErgebnis()}]
 public static void speicherErgebnis(String dateiname, String inhalt) {
     File verzeichnis = new File("ausgabe");
-    if (!verzeichnis.exists()) verzeichnis.mkdir();
+    if (!verzeichnis.exists()) verzeichnis.mkdir(); // einmalig anlegen
+
     File zielDatei = new File(verzeichnis,
         dateiname.replace(".txt", "") + "_ergebnis.txt");
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(zielDatei))) {
+
+    try (BufferedWriter writer =
+             new BufferedWriter(new FileWriter(zielDatei))) {
         writer.write(inhalt);
+        System.out.println("  Gespeichert: "
+            + zielDatei.getAbsolutePath());
     } catch (IOException e) {
-        System.err.println("Fehler beim Speichern: " + e.getMessage());
+        System.err.println("  Fehler beim Speichern: " + e.getMessage());
     }
 }
 \end{lstlisting}
 
-Das Verzeichnis \texttt{ausgabe/} wird beim ersten Aufruf automatisch angelegt, falls es noch nicht existiert. Der Dateiname ergibt sich aus dem Eingabedateinamen mit dem Suffix \texttt{\_ergebnis.txt}.
+\subsection{Format der Ausgabe — annotiertes Beispiel}
 
-\subsection{Format der Ausgabe}
-
-Die erzeugte Ausgabe für Beispiel2, Strategie ``Einseitiges Warten'', sieht folgendermaßen aus:
+Die vollständige Ausgabe für Beispiel2, Strategie \textit{Einseitiges Warten}:
 
 \begin{verbatim}
 Einseitiges Warten:
-An     22  31  38  46  50  53
-Wa
-Ab 17  23  32  39  47  51
-    A   B   C   D   E   F   G
-Ab     41  32  09  01  57  54
-Wa         16
-An 46  40  15  08  00  56
-Gesamtdauer Hinfahrt, Rueckfahrt       : 36, 52
+An     22  32  39  47  51  54    <- Ankunft Hinfahrt (A hat keine Ankunft)
+Wa                               <- Wartezeit Hin (alle 0 -> leer)
+Ab 17  23  33  40  48  52  55    <- Abfahrt Hinfahrt
+    A   B   C   D   E   F   G    <- Bahnhofnamen (kein 'x' -> keine Kollision hier)
+Ab 33  43  33  10  02  58  55    <- Abfahrt Rueckfahrt
+Wa         16                    <- Wartezeit Rueck: C wartet 16 min
+An 48  42  16  09  01  57        <- Ankunft Rueckfahrt (G hat keine Ankunft)
+Gesamtdauer Hinfahrt, Rueckfahrt       : 37, 53
 Summe Wartezeiten Hinfahrt, Rueckfahrt : 0, 16
 Summe Strafen                          : 256
 \end{verbatim}
 
 \begin{itemize}
-    \item \textbf{Zeile 1}: Strategiename
-    \item \textbf{An / Wa / Ab (oben)}: Ankunft-, Wartezeit- und Abfahrtszeile der Hinfahrt
-    \item \textbf{Bahnhofzeile}: Namen mit \texttt{x} für Kollisionsabschnitte
-    \item \textbf{Ab / Wa / An (unten)}: Abfahrt-, Wartezeit- und Ankunftszeile der Rückfahrt
-    \item \textbf{Statistikzeilen}: Gesamtdauer, Wartezeiten und Strafe
+  \item \textbf{Strategiename} (Zeile 1): von \texttt{strategie.getStrategieName()}
+  \item \textbf{An / Wa / Ab (oben)}: drei Zeilen der Hinfahrt
+  \item \textbf{Bahnhofzeile}: Stationsnamen; bei der \textit{Einfachen Fahrt} erscheint
+    z.\,B. \texttt{Bx} wenn das Segment B$\to$C eine Kollision hat
+  \item \textbf{Ab / Wa / An (unten)}: drei Zeilen der Rückfahrt
+  \item \textbf{Statistik}: Gesamtdauer, Wartezeiten, Strafe —
+    alle ausgerichtet für einfaches Lesen im Texteditor
 \end{itemize}
+
+\subsection{Vollständiger Quellcode}
+
+\begin{lstlisting}[caption={AusgabeManager.java -- vollständiger Quellcode}]
+package de.matse.ihk.io;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.function.Function;
+
+import de.matse.ihk.model.BahnhofNode;
+import de.matse.ihk.model.BahnhofPlan;
+import de.matse.ihk.strategie.FahrplanStrategie;
+
+/**
+ * Formatiert und speichert die Simulationsergebnisse.
+ * Alle Methoden sind statisch -- diese Klasse ist nicht zur
+ * Instanziierung gedacht.
+ */
+public class AusgabeManager {
+
+    /**
+     * Gibt eine lesbare Zusammenfassung der Eingabedaten aus:
+     * Stationsnamen, Streckenabstaende und die geplante Abfahrtszeit.
+     * Erscheint einmal pro Datei, vor den drei Strategiebloecken.
+     */
+    public static String druckeEingabe(BahnhofPlan plan,
+                                       int startZeit) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Eingabe:\n");
+        sb.append("  Strecke   : ");
+        BahnhofNode cur = plan.getHead();
+        while (cur != null) {
+            sb.append(cur.getName());
+            if (cur.getNext() != null) sb.append(" -> ");
+            cur = cur.getNext();
+        }
+        sb.append("\n");
+        sb.append("  Abstaende : ");
+        cur = plan.getHead();
+        boolean first = true;
+        while (cur != null && cur.getNext() != null) {
+            if (!first) sb.append(", ");
+            sb.append(cur.getDistanceToNext()).append(" min");
+            first = false;
+            cur = cur.getNext();
+        }
+        sb.append("\n");
+        sb.append(String.format("  Start Hin : %02d%n", startZeit));
+        sb.append("\n");
+        return sb.toString();
+    }
+
+    /**
+     * Erstellt die vollstaendige 7-zeilige Fahrplantabelle einer
+     * Strategie samt Statistikblock.
+     */
+    public static String druckeErgebnis(FahrplanStrategie strategie,
+                                        BahnhofPlan plan) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(strategie.getStrategieName()).append(":\n");
+
+        sb.append(printRow("An ", n -> n.getAnkunfthin() != null
+            ? String.format("%02d", n.getAnkunfthin())   : "  ",
+            plan, false));
+        sb.append(printRow("Wa ", n -> n.getWartezeitHin() > 0
+            ? String.format("%02d", n.getWartezeitHin())  : "  ",
+            plan, false));
+        sb.append(printRow("Ab ", n -> n.getAbfahrthin() != null
+            ? String.format("%02d", n.getAbfahrthin())   : "  ",
+            plan, false));
+        sb.append(printRow("   ",
+            n -> String.format("%2s", n.getName()), plan, true));
+        sb.append(printRow("Ab ", n -> n.getAbfahrtrueck() != null
+            ? String.format("%02d", n.getAbfahrtrueck()) : "  ",
+            plan, false));
+        sb.append(printRow("Wa ", n -> n.getWartezeitRueck() > 0
+            ? String.format("%02d", n.getWartezeitRueck()): "  ",
+            plan, false));
+        sb.append(printRow("An ", n -> n.getAnkunftrueck() != null
+            ? String.format("%02d", n.getAnkunftrueck()) : "  ",
+            plan, false));
+
+        int mindestdauer = berechneMindestdauer(plan);
+        int warteHin = 0, warteRueck = 0;
+        BahnhofNode current = plan.getHead();
+        while (current != null) {
+            warteHin   += current.getWartezeitHin();
+            warteRueck += current.getWartezeitRueck();
+            current = current.getNext();
+        }
+        sb.append(String.format(
+            "Gesamtdauer Hinfahrt, Rueckfahrt       : %d, %d%n",
+            mindestdauer + warteHin, mindestdauer + warteRueck));
+        sb.append(String.format(
+            "Summe Wartezeiten Hinfahrt, Rueckfahrt : %d, %d%n",
+            warteHin, warteRueck));
+        sb.append(String.format(
+            "Summe Strafen                          : %d%n",
+            strategie.getSummeStrafen()));
+        sb.append("\n");
+        return sb.toString();
+    }
+
+    /**
+     * Erzeugt eine horizontale Zeile der Ausgabetabelle.
+     * wertExtraktor: Lambda, das den Zellwert aus einem Knoten
+     * extrahiert. isStationRow: bei true wird 'x' nach Knoten
+     * mit Kollision im Folgesegment angehaengt.
+     */
+    private static String printRow(
+            String label,
+            Function<BahnhofNode, String> wertExtraktor,
+            BahnhofPlan plan,
+            boolean isStationRow) {
+        StringBuilder row = new StringBuilder();
+        row.append(String.format("%-3s", label));
+        BahnhofNode current = plan.getHead();
+        while (current != null) {
+            row.append(wertExtraktor.apply(current));
+            if (current.getNext() != null)
+                row.append(isStationRow && current.isKollision()
+                    ? "x " : "  ");
+            current = current.getNext();
+        }
+        row.append("\n");
+        return row.toString();
+    }
+
+    /**
+     * Gibt die Mindestfahrtdauer zurueck: Summe aller
+     * Streckenabstaende plus je eine Halteminute pro
+     * Zwischenbahnhof.
+     */
+    public static int berechneMindestdauer(BahnhofPlan plan) {
+        int dauer = 0;
+        int anzahl = 0;
+        BahnhofNode cur = plan.getHead();
+        while (cur != null) {
+            anzahl++;
+            if (cur.getNext() != null)
+                dauer += cur.getDistanceToNext();
+            cur = cur.getNext();
+        }
+        if (anzahl > 2) dauer += (anzahl - 2);
+        return dauer;
+    }
+
+    /**
+     * Schreibt inhalt in ausgabe/<dateiname ohne .txt>_ergebnis.txt.
+     * Erstellt das Ausgabeverzeichnis, falls es nicht existiert.
+     */
+    public static void speicherErgebnis(String dateiname,
+                                        String inhalt) {
+        File verzeichnis = new File("ausgabe");
+        if (!verzeichnis.exists()) verzeichnis.mkdir();
+        File zielDatei = new File(verzeichnis,
+            dateiname.replace(".txt", "") + "_ergebnis.txt");
+        try (BufferedWriter writer =
+                 new BufferedWriter(new FileWriter(zielDatei))) {
+            writer.write(inhalt);
+            System.out.println("  Gespeichert: "
+                + zielDatei.getAbsolutePath());
+        } catch (IOException e) {
+            System.err.println("  Fehler beim Speichern: "
+                + e.getMessage());
+        }
+    }
+}
+\end{lstlisting}
 
 % ─────────────────────────────────────────
 \section{UML-Diagramme (Mermaid)}
